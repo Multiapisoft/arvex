@@ -262,9 +262,16 @@ export default function FalconApp() {
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && isAddress(saved)) {
+    // Prefer env/default when localStorage still has a previous deploy address.
+    const legacy = new Set([
+      "0xb573d4159956e798e8f8c228481de1cbab135f72",
+      "0x9ddb41afa46d87a2988b4e057f59a4234a62c0a6",
+    ]);
+    if (saved && isAddress(saved) && !legacy.has(saved.toLowerCase())) {
       setContractAddr(saved);
       setContractInput(saved);
+    } else if (saved && legacy.has(saved.toLowerCase())) {
+      localStorage.setItem(STORAGE_KEY, DEFAULT_CONTRACT_ADDRESS);
     }
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
