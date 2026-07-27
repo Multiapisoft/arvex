@@ -1430,17 +1430,31 @@ export default function FalconApp() {
         </div>
 
         <div className="grid-stats" style={{ marginBottom: "1rem" }}>
-          {[
-            ["Registered", registered ? "Yes" : "No"],
-            ["Current Package", currentPackage ? pkgName(currentPackage) : "—"],
-            ["Sponsor", shortAddr(sponsor)],
-            ["Total Invested", fmtUsd(invested, tokenDecimals)],
-            ["Total Earned", fmtUsd(earned, tokenDecimals)],
-            ["Withdrawable", fmtUsd(withdrawable, tokenDecimals)],
-            ["Wallet Balance", `${fmtToken(balance, tokenDecimals)} ${tokenSymbol}`],
-            ["Token Allowance", `${fmtToken(allowance, tokenDecimals)} ${tokenSymbol}`],
-            ["Joined", fmtTime(joinedAt)],
-          ].map(([label, value], i) => (
+          {(
+            [
+              [
+                "Registered",
+                registered ? (
+                  <span style={{ color: "var(--color-success)",display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                    Active{" "}
+                    <span aria-hidden="true" style={{ color: "var(--color-success)", fontWeight: 700 }}>
+                      ✓
+                    </span>
+                  </span>
+                ) : (
+                  "No"
+                ),
+              ],
+              ["Current Package", currentPackage ? pkgName(currentPackage) : "—"],
+              ["Sponsor", shortAddr(sponsor)],
+              ["Total Investment", fmtUsd(invested, tokenDecimals)],
+              ["Total Earned", fmtUsd(earned, tokenDecimals)],
+              ["Withdrawable", fmtUsd(withdrawable, tokenDecimals)],
+              ["Wallet Balance", `${fmtToken(balance, tokenDecimals)} ${tokenSymbol}`],
+              ["Token Allowance", `${fmtToken(allowance, tokenDecimals)} ${tokenSymbol}`],
+              ["Joined", fmtTime(joinedAt)],
+            ] as const
+          ).map(([label, value], i) => (
             <div className="card" key={label}>
               <div className="stat-label !text-left">{label}</div>
               <div className={`stat-value !text-left${i === 5 ? " text-gradient-gold" : ""}`}>{value}</div>
@@ -1758,12 +1772,12 @@ export default function FalconApp() {
               )}
             </div>
           </div>
-          <div className="card">
+          {/* <div className="card">
             <div className="stat-label !text-left">Platform Users</div>
             <div className="stat-value !text-left">
               {staticLoading || busy ? <span className="skeleton inline-block h-7 w-12" aria-hidden /> : totalUsers}
             </div>
-          </div>
+          </div> */}
         </div>
         <div className="card" style={{ marginBottom: "1rem" }}>
           <h2 className="card-title">Invite Link</h2>

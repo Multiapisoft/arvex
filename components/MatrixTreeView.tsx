@@ -212,7 +212,9 @@ function TreeBoard({
                 seat={child}
                 label={isFilled(child.address) ? shortAddr(child.address) : "Empty"}
                 levelLabel={
-                  isFilled(child.address) ? (child.active ? "Active" : "Inactive") : "Open"
+                  isFilled(child.address)
+                    ? `${pkgName(packageId)} · ${child.active ? "Active" : "Inactive"}`
+                    : "Open"
                 }
                 isYou={
                   isFilled(child.address) && child.address.toLowerCase() === account.toLowerCase()
@@ -247,7 +249,11 @@ function TreeBoard({
                   key={idx}
                   seat={gc}
                   label={isFilled(gc.address) ? shortAddr(gc.address) : "Empty"}
-                  levelLabel={isFilled(gc.address) ? (gc.active ? "Active" : "Inactive") : "Open"}
+                  levelLabel={
+                    isFilled(gc.address)
+                      ? `${pkgName(packageId)} · ${gc.active ? "Active" : "Inactive"}`
+                      : "Open"
+                  }
                   size="sm"
                   isYou={
                     isFilled(gc.address) && gc.address.toLowerCase() === account.toLowerCase()
@@ -381,23 +387,25 @@ export function MatrixTreeView({
 
   const filledL1 = children.filter((c) => isFilled(c.address));
   const filledL2 = grandchildren.flat().filter((c) => isFilled(c.address));
-  const activeCount =
-    (data.active ? 1 : 0) +
-    filledL1.filter((c) => c.active).length +
-    filledL2.filter((c) => c.active).length;
+  // Per selected package matrix — exclude root (yourself); Total uses contract downline
+  const downlineTotal = Math.max(0, Number(data.downline) || 0);
+  const totalMembers = downlineTotal > 0 ? downlineTotal : filledL1.length + filledL2.length;
+  const activeMembers =
+    filledL1.filter((c) => c.active).length + filledL2.filter((c) => c.active).length;
   const totalVisible = 1 + filledL1.length + filledL2.length;
   const emptyPositions = 1 + 3 + 9 - totalVisible;
   const isMeRoot = data.root.toLowerCase() === account.toLowerCase();
   const canGoUp = isFilled(data.parent);
   const pathLabels = path.length ? path : [data.root || account];
+  const pkgLabel = pkgName(packageId);
 
   const counts = useMemo(
     () => ({
-      total: totalVisible,
-      active: activeCount,
+      total: totalMembers,
+      active: activeMembers,
       empty: Math.max(0, emptyPositions),
     }),
-    [totalVisible, activeCount, emptyPositions],
+    [totalMembers, activeMembers, emptyPositions],
   );
 
   async function openSubtree(addr: string) {
@@ -662,6 +670,32 @@ export function MatrixTreeView({
         </div>
       )}
 
+      <div className="mx-pkg-tabs" role="tablist" aria-label="Package matrix">
+        {[1, 2, 3, 4, 5].map((id) => {
+          const owned = activePackageId > 0 && id <= activePackageId;
+          const isActivePkg = id === activePackageId;
+          const selected = id === packageId;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              className={cn("mx-pkg-tab", selected && "active", !owned && "disabled")}
+              disabled={!owned && activePackageId > 0}
+              onClick={() => {
+                if (!owned && activePackageId > 0) return;
+                onPackageChange(id);
+                setPkgOpen(false);
+              }}
+            >
+              <span>{PACKAGE_NAMES[id]}</span>
+              {isActivePkg ? <em>Active</em> : owned ? <em>Owned</em> : null}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="mx-breadcrumb" aria-label="Matrix path">
         {pathLabels.map((addr, i) => {
           const last = i === pathLabels.length - 1;
@@ -684,8 +718,18 @@ export function MatrixTreeView({
       </div>
 
       <div className="mx-kpi-row">
-        <StatCard label="Total Members" value={counts.total} tone="gold" icon={<Users className="h-5 w-5" />} />
-        <StatCard label="Active Members" value={counts.active} tone="green" icon={<GitBranch className="h-5 w-5" />} />
+        <StatCard
+          label={`Total Members · ${pkgLabel}`}
+          value={counts.total}
+          tone="gold"
+          icon={<Users className="h-5 w-5" />}
+        />
+        <StatCard
+          label={`Active Members · ${pkgLabel}`}
+          value={counts.active}
+          tone="green"
+          icon={<GitBranch className="h-5 w-5" />}
+        />
         <StatCard
           label={earningsLabel}
           value={earningsValue || "—"}
