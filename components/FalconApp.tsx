@@ -42,6 +42,7 @@ import {
   MatrixTreeView,
   type MatrixSeatInfo,
   type MatrixTreeData,
+  type MatrixTreeMode,
 } from "@/components/MatrixTreeView";
 
 type TabId =
@@ -68,7 +69,7 @@ type ToastState = { message: string; type: "success" | "error" } | null;
 const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "income", label: "Income History", icon: History },
-  { id: "matrix", label: "Matrix Tree", icon: GitBranch },
+  { id: "matrix", label: "Matrix / Global", icon: GitBranch },
   { id: "team", label: "My Team", icon: Users },
   { id: "packages", label: "Packages", icon: Package },
   { id: "secure", label: "Secure Fund", icon: Shield },
@@ -169,9 +170,12 @@ export default function FalconApp() {
 
   // Matrix
   const [matrixPkg, setMatrixPkg] = useState(1);
+  const [matrixTreeMode, setMatrixTreeMode] = useState<MatrixTreeMode>("matrix");
   const [matrixFocus, setMatrixFocus] = useState("");
   const [matrixPath, setMatrixPath] = useState<string[]>([]);
   const [matrixLoading, setMatrixLoading] = useState(false);
+  /** Tracks last auto-synced package so manual package picks are kept until upgrade. */
+  const lastSyncedPkg = useRef(0);
   const [matrixInfo, setMatrixInfo] = useState({
     active: false,
     parent: "",
@@ -560,7 +564,14 @@ export default function FalconApp() {
         setTab((prev) => (prev === "register" ? "dashboard" : prev));
       }
       setSponsor(String(u.sponsor ?? u[1] ?? ""));
-      setCurrentPackage(Number(u.currentPackage ?? u[2] ?? 0));
+      const pkg = Number(u.currentPackage ?? u[2] ?? 0);
+      setCurrentPackage(pkg);
+      // Keep matrix tree on the user's active (highest) package after load / upgrade
+      if (pkg > 0 && pkg !== lastSyncedPkg.current) {
+        lastSyncedPkg.current = pkg;
+        setMatrixPkg(pkg);
+        setDownlinePkg(pkg);
+      }
       setInvested(BigInt(u.totalInvested ?? u[3] ?? 0));
       setEarned(BigInt(u.totalEarned ?? u[4] ?? 0));
       setWithdrawable(BigInt(u.withdrawable ?? u[5] ?? 0));
@@ -888,6 +899,7 @@ export default function FalconApp() {
     if (!account) return;
     setMatrixFocus(account);
     setMatrixPath([account]);
+    lastSyncedPkg.current = 0;
     // Mark as synced so matrix effect doesn't double-fetch with refreshAll
     prevMatrixQuery.current = { pkg: prevMatrixQuery.current.pkg, focus: account };
   }, [account]);
@@ -923,6 +935,13 @@ export default function FalconApp() {
     if (!account || walletRestoring) return;
     const prev = prevMatrixQuery.current;
     if (prev.pkg === matrixPkg && prev.focus.toLowerCase() === matrixFocus.toLowerCase()) return;
+    // Package switch → return to own seat for that package matrix
+    if (prev.pkg !== matrixPkg && matrixFocus.toLowerCase() !== account.toLowerCase()) {
+      prevMatrixQuery.current = { pkg: matrixPkg, focus: account };
+      setMatrixFocus(account);
+      setMatrixPath([account]);
+      return;
+    }
     prevMatrixQuery.current = { pkg: matrixPkg, focus: matrixFocus };
     void loadMatrix();
   }, [account, walletRestoring, matrixPkg, matrixFocus, loadMatrix]);
@@ -1620,17 +1639,21 @@ export default function FalconApp() {
       </section>
       )}
 
-      {/* Matrix */}
+      {/* Matrix + Global Autopool */}
       {tab === "matrix" && (
       <section>
         <MatrixTreeView
           account={account}
           packageId={matrixPkg}
+          activePackageId={currentPackage}
+          treeMode={matrixTreeMode}
+          onTreeModeChange={setMatrixTreeMode}
           loading={matrixLoading || busy}
           path={matrixPath.length ? matrixPath : matrixFocus ? [matrixFocus] : account ? [account] : []}
           sponsor={sponsor}
           joinedLabel={joinedAt ? fmtTime(joinedAt) : "—"}
           matrixEarnedLabel={fmtUsd(incomePools.matrix, tokenDecimals)}
+          globalEarnedLabel={fmtUsd(incomePools.global, tokenDecimals)}
           data={{
             root: matrixFocus || account,
             parent: matrixInfo.parent,
@@ -1662,27 +1685,45 @@ export default function FalconApp() {
         />
 
         <div className="card" style={{ marginTop: "1rem" }}>
-          <h2 className="card-title">All Package Matrices</h2>
+          <h2 className="card-title">
+            Package Matrices
+            {currentPackage > 0 ? ` · Active: ${PACKAGE_NAMES[currentPackage]}` : ""}
+          </h2>
+          <p className="text-muted" style={{ fontSize: "0.82rem", margin: "0 0 0.85rem" }}>
+            Each owned package has its own 3× placement tree. Matrix income and Global Autopool both
+            pay from the same tree for that package.
+          </p>
           {(userLoading || busy) && allMatrix.length === 0 ? (
             <DataLoading label="Loading package matrices…" />
           ) : (
             <div className="grid-stats">
-              {allMatrix.map((m) => (
-                <button
-                  type="button"
-                  className={`card text-left transition hover:border-[var(--color-border-strong)]${
-                    m.pkg === matrixPkg ? " ring-1 ring-[var(--color-solar-400)]" : ""
-                  }`}
-                  key={m.pkg}
-                  onClick={() => setMatrixPkg(m.pkg)}
-                >
-                  <div className="stat-label !text-left">{PACKAGE_NAMES[m.pkg]}</div>
-                  <div className="stat-value !text-left">{m.active ? "Active" : "Off"}</div>
-                  <p className="text-muted" style={{ fontSize: "0.78rem", margin: "0.5rem 0 0" }}>
-                    Downline {String(m.downline)} · Children {m.children}/3 · Rank {m.rank || "—"}
-                  </p>
-                </button>
-              ))}
+              {allMatrix.map((m) => {
+                const owned = currentPackage > 0 && m.pkg <= currentPackage;
+                const isActive = m.pkg === currentPackage;
+                const selected = m.pkg === matrixPkg;
+                return (
+                  <button
+                    type="button"
+                    className={`card text-left transition hover:border-[var(--color-border-strong)]${
+                      selected ? " ring-1 ring-[var(--color-solar-400)]" : ""
+                    }${!owned ? " opacity-50" : ""}`}
+                    key={m.pkg}
+                    disabled={!owned && currentPackage > 0}
+                    onClick={() => owned && setMatrixPkg(m.pkg)}
+                  >
+                    <div className="stat-label !text-left">
+                      {PACKAGE_NAMES[m.pkg]}
+                      {isActive ? " · Active" : owned ? " · Owned" : ""}
+                    </div>
+                    <div className="stat-value !text-left">
+                      {m.active ? "On" : owned ? "Empty" : "Locked"}
+                    </div>
+                    <p className="text-muted" style={{ fontSize: "0.78rem", margin: "0.5rem 0 0" }}>
+                      Downline {String(m.downline)} · Children {m.children}/3 · Rank {m.rank || "—"}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           )}
           <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: "0.85rem" }}>

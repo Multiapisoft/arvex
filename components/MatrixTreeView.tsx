@@ -43,15 +43,22 @@ export type MatrixTreeData = {
   grandchildren: MatrixSeatInfo[][];
 };
 
+export type MatrixTreeMode = "matrix" | "global";
+
 type MatrixTreeViewProps = {
   account: string;
   packageId: number;
+  /** User's highest owned package — used to highlight Active + unlock owned matrices. */
+  activePackageId?: number;
   data: MatrixTreeData;
   path: string[];
   loading?: boolean;
   sponsor?: string;
   joinedLabel?: string;
   matrixEarnedLabel?: string;
+  globalEarnedLabel?: string;
+  treeMode?: MatrixTreeMode;
+  onTreeModeChange?: (mode: MatrixTreeMode) => void;
   onPackageChange: (id: number) => void;
   onFocus: (address: string) => void;
   onGoHome: () => void;
@@ -324,12 +331,16 @@ function useCenterScroll(deps: unknown[]) {
 export function MatrixTreeView({
   account,
   packageId,
+  activePackageId = 0,
   data,
   path,
   loading,
   sponsor,
   joinedLabel,
   matrixEarnedLabel,
+  globalEarnedLabel,
+  treeMode = "matrix",
+  onTreeModeChange,
   onPackageChange,
   onFocus,
   onGoHome,
@@ -346,6 +357,14 @@ export function MatrixTreeView({
   const [modalData, setModalData] = useState<MatrixTreeData | null>(null);
   const [modalStack, setModalStack] = useState<string[]>([]);
   const [infoOpen, setInfoOpen] = useState(false);
+  const isGlobal = treeMode === "global";
+  const treeTitle = isGlobal ? "Global Autopool Tree" : "Matrix Tree";
+  const treeSubtitle = isGlobal
+    ? `Global pool placements · ${pkgName(packageId)}`
+    : `3× Autopool matrix · ${pkgName(packageId)}`;
+  const earningsLabel = isGlobal ? "Global Earnings" : "Matrix Earnings";
+  const earningsValue = isGlobal ? globalEarnedLabel : matrixEarnedLabel;
+  const matrixTypeLabel = isGlobal ? "3× Global Autopool" : "3×3 Matrix Autopool";
   const portalReady = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -449,7 +468,10 @@ export function MatrixTreeView({
           <div className="mx-side-user-meta">
             <h4>{isMeRoot ? "Your Position" : shortAddr(data.root)}</h4>
             <p className="font-mono text-2xs text-muted">{shortAddr(data.root, 8)}</p>
-            <span className="badge badge-gold mt-2">{pkgName(packageId)}</span>
+            <span className="badge badge-gold mt-2">
+              {pkgName(packageId)}
+              {activePackageId === packageId ? " · Active" : ""}
+            </span>
           </div>
         </div>
         <ul className="mx-side-list">
@@ -482,15 +504,18 @@ export function MatrixTreeView({
       </div>
 
       <div className="mx-side-card">
-        <h4 className="mx-side-title">Matrix Info</h4>
+        <h4 className="mx-side-title">{isGlobal ? "Global Autopool Info" : "Matrix Info"}</h4>
         <ul className="mx-side-list">
           <li>
-            <span>Matrix Type</span>
-            <strong>3×3 Autopool</strong>
+            <span>Tree Type</span>
+            <strong>{matrixTypeLabel}</strong>
           </li>
           <li>
             <span>Package</span>
-            <strong>{pkgName(packageId)}</strong>
+            <strong>
+              {pkgName(packageId)}
+              {activePackageId === packageId ? " · Active" : ""}
+            </strong>
           </li>
           <li>
             <span>Children</span>
@@ -505,8 +530,8 @@ export function MatrixTreeView({
             <strong>{counts.empty}</strong>
           </li>
           <li>
-            <span>Matrix Earnings</span>
-            <strong className="text-leaf-400">{matrixEarnedLabel || "—"}</strong>
+            <span>{earningsLabel}</span>
+            <strong className="text-leaf-400">{earningsValue || "—"}</strong>
           </li>
         </ul>
       </div>
@@ -548,8 +573,8 @@ export function MatrixTreeView({
             <Network className="h-5 w-5" />
           </span>
           <div>
-            <h2>3×3 Matrix Tree</h2>
-            <p>Build Your Network · {pkgName(packageId)}</p>
+            <h2>{treeTitle}</h2>
+            <p>{treeSubtitle}</p>
           </div>
         </div>
         <div className="mx-dash-head-actions">
@@ -581,28 +606,61 @@ export function MatrixTreeView({
             >
               <Layers className="h-4 w-4" />
               {PACKAGE_NAMES[packageId]}
+              {activePackageId === packageId ? " · Active" : ""}
               <ChevronDown className="h-4 w-4 opacity-70" />
             </button>
             {pkgOpen && (
               <div className="mx-pkg-dropdown">
-                {[1, 2, 3, 4, 5].map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={cn(id === packageId && "active")}
-                    onClick={() => {
-                      onPackageChange(id);
-                      setPkgOpen(false);
-                    }}
-                  >
-                    {PACKAGE_NAMES[id]}
-                  </button>
-                ))}
+                {[1, 2, 3, 4, 5].map((id) => {
+                  const owned = activePackageId > 0 && id <= activePackageId;
+                  const isActivePkg = id === activePackageId;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={cn(id === packageId && "active", !owned && "disabled")}
+                      disabled={!owned && activePackageId > 0}
+                      onClick={() => {
+                        if (!owned && activePackageId > 0) return;
+                        onPackageChange(id);
+                        setPkgOpen(false);
+                      }}
+                    >
+                      {PACKAGE_NAMES[id]}
+                      {isActivePkg ? " · Active" : owned ? " · Owned" : ""}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
       </header>
+
+      {onTreeModeChange && (
+        <div className="mx-mode-toggle" role="tablist" aria-label="Tree type">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!isGlobal}
+            className={cn("mx-mode-btn", !isGlobal && "active")}
+            onClick={() => onTreeModeChange("matrix")}
+          >
+            <GitBranch className="h-4 w-4" />
+            Matrix Tree
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={isGlobal}
+            className={cn("mx-mode-btn", isGlobal && "active")}
+            onClick={() => onTreeModeChange("global")}
+          >
+            <Network className="h-4 w-4" />
+            Global Autopool
+          </button>
+        </div>
+      )}
 
       <div className="mx-breadcrumb" aria-label="Matrix path">
         {pathLabels.map((addr, i) => {
@@ -629,8 +687,8 @@ export function MatrixTreeView({
         <StatCard label="Total Members" value={counts.total} tone="gold" icon={<Users className="h-5 w-5" />} />
         <StatCard label="Active Members" value={counts.active} tone="green" icon={<GitBranch className="h-5 w-5" />} />
         <StatCard
-          label="Matrix Earnings"
-          value={matrixEarnedLabel || "—"}
+          label={earningsLabel}
+          value={earningsValue || "—"}
           tone="leaf"
           icon={<Wallet className="h-5 w-5" />}
         />
@@ -640,7 +698,10 @@ export function MatrixTreeView({
       <div className="mx-dash-grid">
         <div className="mx-tree-panel">
           <div className="mx-tree-panel-head">
-            <h3>Matrix Tree View</h3>
+            <h3>
+              {isGlobal ? "Global Autopool View" : "Matrix Tree View"}
+              <span className="mx-tree-pkg-tag">{pkgName(packageId)}</span>
+            </h3>
             <div className="mx-mini-legend">
               <span>
                 <i className="dot active" /> Active
@@ -654,11 +715,22 @@ export function MatrixTreeView({
             </div>
           </div>
 
+          {!data.active && activePackageId > 0 && packageId === activePackageId && (
+            <div className="mx-tree-empty-hint">
+              Your {pkgName(packageId)} matrix seat is not active yet. Buy or refresh after purchase.
+            </div>
+          )}
+          {activePackageId === 0 && (
+            <div className="mx-tree-empty-hint">
+              No active package. Register and buy Starter to open your matrix &amp; global autopool tree.
+            </div>
+          )}
+
           <div className="mx-tree-scroll" ref={scrollRef}>
             {loading && (
               <div className="mx-tree-loading">
                 <Loader2 className="h-6 w-6 animate-spin text-solar-400" />
-                <p>Loading matrix tree…</p>
+                <p>Loading {isGlobal ? "global autopool" : "matrix"} tree…</p>
               </div>
             )}
             <TreeBoard
@@ -671,7 +743,11 @@ export function MatrixTreeView({
           </div>
 
           <div className="mx-tree-foot">
-            <p>Click any filled node to open its downline tree in a modal · Home / Up / breadcrumb navigate main view</p>
+            <p>
+              {isGlobal
+                ? "Same package placement tree as Matrix — Global pool pays per upline level on fills."
+                : "Click any filled node to open its downline · Home / Up / breadcrumb navigate main view"}
+            </p>
             {onUpgrade && (
               <button type="button" className="btn btn-primary mx-upgrade-btn" onClick={onUpgrade}>
                 Upgrade Package
@@ -723,7 +799,7 @@ export function MatrixTreeView({
             <div className="mx-modal-panel">
               <div className="mx-modal-head">
                 <div>
-                  <h3>Downline Tree</h3>
+                  <h3>{isGlobal ? "Global Autopool Downline" : "Matrix Downline"}</h3>
                   <p className="font-mono text-sm text-muted">
                     {modalData ? shortAddr(modalData.root, 8) : "Loading…"}
                   </p>
