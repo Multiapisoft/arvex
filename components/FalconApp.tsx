@@ -176,6 +176,7 @@ export default function FalconApp() {
   const [matrixLoading, setMatrixLoading] = useState(false);
   /** Tracks last auto-synced package so manual package picks are kept until upgrade. */
   const lastSyncedPkg = useRef(0);
+  const matrixLoadSeq = useRef(0);
   const [matrixInfo, setMatrixInfo] = useState({
     active: false,
     parent: "",
@@ -750,6 +751,12 @@ export default function FalconApp() {
 
   const fetchMatrixTreeData = useCallback(
     async (rootAddr: string, pkgId: number): Promise<MatrixTreeData> => {
+      const emptySeat = (): MatrixSeatInfo => ({
+        address: "",
+        active: false,
+        childCount: 0,
+        downline: "0",
+      });
       const empty: MatrixTreeData = {
         root: rootAddr,
         parent: "",
@@ -757,21 +764,25 @@ export default function FalconApp() {
         childrenCount: 0,
         downline: "0",
         ctoRank: 0,
-        children: [
-          { address: "", active: false, childCount: 0, downline: "0" },
-          { address: "", active: false, childCount: 0, downline: "0" },
-          { address: "", active: false, childCount: 0, downline: "0" },
-        ],
+        children: [emptySeat(), emptySeat(), emptySeat()],
         grandchildren: [[], [], []],
       };
-      if (!rootAddr || !isAddress(rootAddr)) return empty;
+      if (!rootAddr || !isAddress(rootAddr) || pkgId < 1 || pkgId > 5) return empty;
 
       const c = await getReadContract();
 
+      /** Normalize ethers Result / array / tuple into 3 addresses. */
+      function toAddr3(raw: unknown): string[] {
+        const list = raw as { length?: number; [i: number]: unknown } | null;
+        return [0, 1, 2].map((i) => {
+          const v = list?.[i];
+          const s = v != null ? String(v) : "";
+          return s && s !== ZeroAddress && isAddress(s) ? s : "";
+        });
+      }
+
       async function seatOf(addr: string): Promise<MatrixSeatInfo> {
-        if (!addr || addr === ZeroAddress || !isAddress(addr)) {
-          return { address: "", active: false, childCount: 0, downline: "0" };
-        }
+        if (!addr || addr === ZeroAddress || !isAddress(addr)) return emptySeat();
         try {
           const info = await c.matrices(addr, pkgId);
           return {
@@ -788,25 +799,15 @@ export default function FalconApp() {
       try {
         const [info, childrenRaw] = await Promise.all([
           c.matrices(rootAddr, pkgId),
-          c
-            .getMatrixChildren(rootAddr, pkgId)
-            .catch(() => [ZeroAddress, ZeroAddress, ZeroAddress] as string[]),
+          c.getMatrixChildren(rootAddr, pkgId).catch(() => null),
         ]);
-        const childAddrs = [0, 1, 2].map((i) => String(childrenRaw[i] || ""));
+        const childAddrs = toAddr3(childrenRaw);
         const childSeats = await Promise.all(childAddrs.map((a) => seatOf(a)));
         const grandchildren = await Promise.all(
           childAddrs.map(async (child) => {
-            if (!child || child === ZeroAddress || !isAddress(child)) {
-              return [
-                { address: "", active: false, childCount: 0, downline: "0" },
-                { address: "", active: false, childCount: 0, downline: "0" },
-                { address: "", active: false, childCount: 0, downline: "0" },
-              ];
-            }
-            const gcRaw: string[] = await c
-              .getMatrixChildren(child, pkgId)
-              .catch(() => [ZeroAddress, ZeroAddress, ZeroAddress]);
-            return Promise.all([0, 1, 2].map((i) => seatOf(String(gcRaw[i] || ""))));
+            if (!child) return [emptySeat(), emptySeat(), emptySeat()];
+            const gcRaw = await c.getMatrixChildren(child, pkgId).catch(() => null);
+            return Promise.all(toAddr3(gcRaw).map((a) => seatOf(a)));
           }),
         );
 
@@ -827,47 +828,68 @@ export default function FalconApp() {
     [getReadContract],
   );
 
-  const loadMatrix = useCallback(async () => {
-    if (!account) return;
-    const root = matrixFocus && isAddress(matrixFocus) ? matrixFocus : account;
-    setMatrixLoading(true);
-    try {
-      const tree = await fetchMatrixTreeData(root, matrixPkg);
-      setMatrixInfo({
-        active: tree.active,
-        parent: tree.parent,
-        childrenCount: tree.childrenCount,
-        downline: BigInt(tree.downline || 0),
-        ctoRank: tree.ctoRank,
-        children: tree.children.map((s) => s.address),
-        childSeats: tree.children,
-        grandchildren: tree.grandchildren,
-      });
-      setMatrixFocus(root);
-      setMatrixPath((prev) => {
-        if (!prev.length) return [root];
-        const idx = prev.findIndex((a) => a.toLowerCase() === root.toLowerCase());
-        if (idx >= 0) return prev.slice(0, idx + 1);
-        return prev;
-      });
-    } catch {
-      setMatrixInfo({
-        active: false,
-        parent: "",
-        childrenCount: 0,
-        downline: 0n,
-        ctoRank: 0,
-        children: ["", "", ""],
-        childSeats: [],
-        grandchildren: [[], [], []],
-      });
-    } finally {
-      setMatrixLoading(false);
-    }
-  }, [account, fetchMatrixTreeData, matrixFocus, matrixPkg]);
+  const loadMatrix = useCallback(
+    async (opts?: { root?: string; pkg?: number }) => {
+      if (!account) return;
+      const root =
+        opts?.root && isAddress(opts.root)
+          ? opts.root
+          : matrixFocus && isAddress(matrixFocus)
+            ? matrixFocus
+            : account;
+      const pkgId = opts?.pkg && opts.pkg >= 1 && opts.pkg <= 5 ? opts.pkg : matrixPkg;
+      const seq = ++matrixLoadSeq.current;
+      setMatrixLoading(true);
+      try {
+        const tree = await fetchMatrixTreeData(root, pkgId);
+        if (seq !== matrixLoadSeq.current) return;
+        setMatrixInfo({
+          active: tree.active,
+          parent: tree.parent,
+          childrenCount: tree.childrenCount,
+          downline: BigInt(tree.downline || 0),
+          ctoRank: tree.ctoRank,
+          children: tree.children.map((s) => s.address),
+          childSeats: tree.children,
+          grandchildren: tree.grandchildren,
+        });
+        setMatrixFocus(root);
+        setMatrixPath((prev) => {
+          if (!prev.length) return [root];
+          const idx = prev.findIndex((a) => a.toLowerCase() === root.toLowerCase());
+          if (idx >= 0) return prev.slice(0, idx + 1);
+          return prev;
+        });
+      } catch {
+        if (seq !== matrixLoadSeq.current) return;
+        setMatrixInfo({
+          active: false,
+          parent: "",
+          childrenCount: 0,
+          downline: 0n,
+          ctoRank: 0,
+          children: ["", "", ""],
+          childSeats: [],
+          grandchildren: [[], [], []],
+        });
+      } finally {
+        if (seq === matrixLoadSeq.current) setMatrixLoading(false);
+      }
+    },
+    [account, fetchMatrixTreeData, matrixFocus, matrixPkg],
+  );
+
+  const selectMatrixPackage = useCallback((pkgId: number) => {
+    if (pkgId < 1 || pkgId > 5) return;
+    setMatrixPkg((prev) => (prev === pkgId ? prev : pkgId));
+    setDownlinePkg(pkgId);
+  }, []);
 
   const refreshSeq = useRef(0);
   const refreshAllRef = useRef<() => Promise<void>>(async () => {});
+  const prevIncomeQuery = useRef({ filter: incomeFilter, page: historyPage });
+  const prevMatrixQuery = useRef({ pkg: matrixPkg, focus: "" });
+  const prevDownlinePkg = useRef(downlinePkg);
 
   const refreshAll = useCallback(async () => {
     const seq = ++refreshSeq.current;
@@ -879,7 +901,15 @@ export default function FalconApp() {
       if (seq === refreshSeq.current) setBusy(false);
 
       if (account) {
-        await Promise.all([loadIncome(), loadMatrix()]);
+        // Prefer package synced by loadUser so we never paint the wrong matrix tree
+        const pkgForMatrix =
+          lastSyncedPkg.current > 0 ? lastSyncedPkg.current : matrixPkg;
+        // Mark query as current so the matrix effect doesn't clear & re-fetch
+        prevMatrixQuery.current = { pkg: pkgForMatrix, focus: account };
+        await Promise.all([
+          loadIncome(),
+          loadMatrix({ root: account, pkg: pkgForMatrix }),
+        ]);
         if (seq !== refreshSeq.current) return;
         void loadDirects();
         void loadDownline();
@@ -887,13 +917,9 @@ export default function FalconApp() {
     } finally {
       if (seq === refreshSeq.current) setBusy(false);
     }
-  }, [account, loadDirects, loadDownline, loadIncome, loadMatrix, loadStatic, loadUser]);
+  }, [account, loadDirects, loadDownline, loadIncome, loadMatrix, loadStatic, loadUser, matrixPkg]);
 
   refreshAllRef.current = refreshAll;
-
-  const prevIncomeQuery = useRef({ filter: incomeFilter, page: historyPage });
-  const prevMatrixQuery = useRef({ pkg: matrixPkg, focus: "" });
-  const prevDownlinePkg = useRef(downlinePkg);
 
   // Keep matrix root in sync when wallet account changes
   useEffect(() => {
@@ -935,15 +961,35 @@ export default function FalconApp() {
   useEffect(() => {
     if (!account || walletRestoring) return;
     const prev = prevMatrixQuery.current;
-    if (prev.pkg === matrixPkg && prev.focus.toLowerCase() === matrixFocus.toLowerCase()) return;
-    // Package switch → return to own seat for that package matrix
-    if (prev.pkg !== matrixPkg && matrixFocus.toLowerCase() !== account.toLowerCase()) {
+    const focus = (matrixFocus || account).toLowerCase();
+    const prevFocus = (prev.focus || "").toLowerCase();
+    if (prev.pkg === matrixPkg && prevFocus === focus) return;
+
+    // Package switch → always reload that package's matrix from own seat
+    if (prev.pkg !== matrixPkg) {
       prevMatrixQuery.current = { pkg: matrixPkg, focus: account };
-      setMatrixFocus(account);
-      setMatrixPath([account]);
+      // Clear previous package seats immediately
+      setMatrixInfo({
+        active: false,
+        parent: "",
+        childrenCount: 0,
+        downline: 0n,
+        ctoRank: 0,
+        children: ["", "", ""],
+        childSeats: [],
+        grandchildren: [[], [], []],
+      });
+      if (matrixFocus.toLowerCase() !== account.toLowerCase()) {
+        setMatrixFocus(account);
+        setMatrixPath([account]);
+      } else {
+        setMatrixPath([account]);
+      }
+      void loadMatrix({ root: account, pkg: matrixPkg });
       return;
     }
-    prevMatrixQuery.current = { pkg: matrixPkg, focus: matrixFocus };
+
+    prevMatrixQuery.current = { pkg: matrixPkg, focus: matrixFocus || account };
     void loadMatrix();
   }, [account, walletRestoring, matrixPkg, matrixFocus, loadMatrix]);
 
@@ -1686,12 +1732,12 @@ export default function FalconApp() {
                 })),
             grandchildren: matrixInfo.grandchildren,
           } satisfies MatrixTreeData}
-          onPackageChange={setMatrixPkg}
+          onPackageChange={selectMatrixPackage}
           onFocus={focusMatrixNode}
           onGoHome={goMatrixHome}
           onGoUp={goMatrixUp}
           onPathJump={jumpMatrixPath}
-          onRefresh={() => void loadMatrix()}
+          onRefresh={() => void loadMatrix({ root: matrixFocus || account, pkg: matrixPkg })}
           onCopy={copyText}
           loadSubtree={(addr) => fetchMatrixTreeData(addr, matrixPkg)}
           onUpgrade={() => {
@@ -1724,7 +1770,7 @@ export default function FalconApp() {
                     }${!owned ? " opacity-50" : ""}`}
                     key={m.pkg}
                     disabled={!owned && currentPackage > 0}
-                    onClick={() => owned && setMatrixPkg(m.pkg)}
+                    onClick={() => owned && selectMatrixPackage(m.pkg)}
                   >
                     <div className="stat-label !text-left">
                       {PACKAGE_NAMES[m.pkg]}
