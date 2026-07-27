@@ -9,7 +9,7 @@ export const EXPLORER_BASE = "https://testnet.bscscan.com";
 /** Override via NEXT_PUBLIC_CONTRACT_ADDRESS or Advanced UI. */
 export const DEFAULT_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
-  "0xd1692deb1670d286376ccab9f0a3662d72106941";
+  "0xBc9E7f1413989eA5dCA5Ac27DD499bAB742696fE";
 
 /** Default USDC (payment token) on BSC Testnet. */
 export const DEFAULT_PAYMENT_TOKEN =
@@ -509,6 +509,16 @@ export const FALCON_ABI = [
       { internalType: "uint256", name: "cto", type: "uint256" },
       { internalType: "uint256", name: "secureFund", type: "uint256" },
     ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "user", type: "address" },
+      { internalType: "uint8", name: "packageId", type: "uint8" },
+    ],
+    name: "isGlobalPoolQualified",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },

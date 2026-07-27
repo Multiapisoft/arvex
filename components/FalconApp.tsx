@@ -268,8 +268,9 @@ export default function FalconApp() {
     const saved = localStorage.getItem(STORAGE_KEY);
     // Prefer env/default when localStorage still has a previous deploy address.
     const legacy = new Set([
-      "0xb573d4159956e798e8f8c228481de1cbab135f72",
-      "0x9ddb41afa46d87a2988b4e057f59a4234a62c0a6",
+      // "0xb573d4159956e798e8f8c228481de1cbab135f72",
+      // "0x9ddb41afa46d87a2988b4e057f59a4234a62c0a6",
+      "0xd1692deb1670d286376ccab9f0a3662d72106941",
     ]);
     if (saved && isAddress(saved) && !legacy.has(saved.toLowerCase())) {
       setContractAddr(saved);
