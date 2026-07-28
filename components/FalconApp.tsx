@@ -19,7 +19,6 @@ import {
   Loader2,
   Package,
   RefreshCw,
-  Shield,
   Users,
 } from "lucide-react";
 import {
@@ -72,7 +71,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "matrix", label: "Matrix / Global", icon: GitBranch },
   { id: "team", label: "My Team", icon: Users },
   { id: "packages", label: "Packages", icon: Package },
-  { id: "secure", label: "Secure Fund", icon: Shield },
+  // { id: "secure", label: "Secure Fund", icon: Shield },
   // { id: "admin", label: "Admin" },
 ];
 
@@ -1404,7 +1403,7 @@ export default function FalconApp() {
         <>
       <PageHeader
         title={TABS.find((t) => t.id === tab)?.label || "Dashboard"}
-        description="Packages · Matrix · Secure Fund · Team"
+        description="Packages · Matrix · Team"
       />
 
       <div className="mb-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
@@ -1552,7 +1551,7 @@ export default function FalconApp() {
           </div>
         </div>
 
-        <div className="card">
+        {/* <div className="card">
           <h2 className="card-title">Secure Fund Eligibility</h2>
           <p>
             <span className={`badge${secureEligible ? " badge-success" : ""}`}>
@@ -1562,7 +1561,7 @@ export default function FalconApp() {
           <p className="text-muted" style={{ fontSize: "0.85rem", margin: "0.5rem 0 0" }}>
             Eligible when total income is zero or less than invested.
           </p>
-        </div>
+        </div> */}
       </section>
       )}
 
@@ -1835,16 +1834,7 @@ export default function FalconApp() {
           </div>
         </div>
         <div className="card" style={{ marginBottom: "1rem" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "0.75rem",
-              flexWrap: "wrap",
-              marginBottom: "0.75rem",
-            }}
-          >
+          <div className="team-list-head">
             <div>
               <h2 className="card-title" style={{ margin: 0 }}>
                 Downline List
@@ -1855,7 +1845,7 @@ export default function FalconApp() {
                   : `${downlineMembers.length} member${downlineMembers.length === 1 ? "" : "s"} in ${PACKAGE_NAMES[downlinePkg] || "package"} matrix`}
               </p>
             </div>
-            <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+            <div className="team-pkg-filters">
               {[1, 2, 3, 4, 5].map((id) => (
                 <button
                   key={id}
@@ -1873,8 +1863,8 @@ export default function FalconApp() {
             </div>
           </div>
           {downlineLoading && <div className="loading-bar mb-3" />}
-          <div style={{ overflowX: "auto" }}>
-            <table className="data-table">
+          <div className="team-table-wrap">
+            <table className="data-table team-data-table">
               <thead>
                 <tr>
                   <th>#</th>
@@ -1909,12 +1899,16 @@ export default function FalconApp() {
                       <td>L{d.level}</td>
                       <td title={d.address}>{shortAddr(d.address)}</td>
                       <td>{pkgName(d.packageId)}</td>
-                      <td>{d.active ? "Active" : "Inactive"}</td>
+                      <td>
+                        <span className={d.active ? "text-leaf-400" : "text-danger"}>
+                          {d.active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
                       <td>{d.childCount}/3</td>
                       <td>{d.downline}</td>
                       <td>{fmtUsd(d.invested, tokenDecimals)}</td>
                       <td>{fmtUsd(d.earned, tokenDecimals)}</td>
-                      <td>{fmtTime(d.joinedAt)}</td>
+                      <td className="team-col-joined">{fmtTime(d.joinedAt)}</td>
                     </tr>
                   ))
                 )}
@@ -1922,7 +1916,7 @@ export default function FalconApp() {
             </table>
           </div>
           {downlineMembers.length > 0 && (
-            <div className="mt-3 flex items-center gap-3">
+            <div className="team-pager">
               <button
                 className="btn btn-ghost"
                 type="button"
@@ -1951,8 +1945,8 @@ export default function FalconApp() {
             People who registered with your referral link ({directs.length})
           </p>
           {(directsLoading || userLoading || busy) && <div className="loading-bar mb-3" />}
-          <div style={{ overflowX: "auto", marginTop: "0.5rem" }}>
-            <table className="data-table">
+          <div className="team-table-wrap" style={{ marginTop: "0.5rem" }}>
+            <table className="data-table team-data-table">
               <thead>
                 <tr>
                   <th>Address</th>
@@ -1978,11 +1972,11 @@ export default function FalconApp() {
                 ) : (
                   directs.map((d) => (
                     <tr key={d.address}>
-                      <td>{shortAddr(d.address)}</td>
+                      <td title={d.address}>{shortAddr(d.address)}</td>
                       <td>{pkgName(d.packageId)}</td>
                       <td>{fmtUsd(d.invested, tokenDecimals)}</td>
                       <td>{fmtUsd(d.earned, tokenDecimals)}</td>
-                      <td>{fmtTime(d.joinedAt)}</td>
+                      <td className="team-col-joined">{fmtTime(d.joinedAt)}</td>
                     </tr>
                   ))
                 )}
@@ -2117,7 +2111,7 @@ export default function FalconApp() {
       </section>
       )}
 
-      {/* Secure Fund */}
+      {/* Secure Fund — temporarily hidden
       {tab === "secure" && (
       <section>
         {(staticLoading || busy) && (
@@ -2180,6 +2174,7 @@ export default function FalconApp() {
         </div>
       </section>
       )}
+      */}
 
       {/* On-chain Admin */}
       {tab === "admin" && (

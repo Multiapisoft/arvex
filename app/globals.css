@@ -1020,6 +1020,102 @@
     color: var(--color-muted); font-weight: 500; font-size: 0.72rem;
     text-transform: uppercase; letter-spacing: 0.06em;
   }
+
+  /* My Team — Downline List responsive table */
+  .team-list-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+  }
+  .team-pkg-filters {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+  .team-table-wrap {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: color-mix(in oklab, var(--color-surface-2, #12181f) 55%, transparent);
+  }
+  .team-data-table {
+    width: max-content;
+    min-width: 100%;
+    margin: 0;
+  }
+  .team-data-table th,
+  .team-data-table td {
+    max-width: none;
+    white-space: nowrap;
+    padding: 0.7rem 0.75rem;
+    vertical-align: middle;
+  }
+  .team-data-table th:first-child,
+  .team-data-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: color-mix(in oklab, var(--color-surface, #0f1419) 96%, transparent);
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.18);
+  }
+  .team-data-table thead th:first-child {
+    z-index: 2;
+  }
+  .team-data-table .team-col-joined {
+    white-space: nowrap;
+  }
+  .team-pager {
+    margin-top: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 768px) {
+    .team-pkg-filters {
+      width: 100%;
+    }
+    .team-pkg-filters .btn {
+      flex: 1 1 calc(33.333% - 0.35rem);
+      min-width: 0;
+      padding-left: 0.45rem;
+      padding-right: 0.45rem;
+      font-size: 0.78rem;
+    }
+    .team-data-table {
+      font-size: 0.8rem;
+    }
+    .team-data-table th,
+    .team-data-table td {
+      padding: 0.6rem 0.65rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .team-pkg-filters .btn {
+      flex: 1 1 calc(50% - 0.35rem);
+      font-size: 0.74rem;
+    }
+    .team-data-table {
+      font-size: 0.76rem;
+    }
+    .team-data-table th,
+    .team-data-table td {
+      padding: 0.55rem 0.55rem;
+    }
+  }
+
   /* ---------- Matrix dashboard (3×3 tree — solar theme) ---------- */
   .mx-dash {
     display: flex;
