@@ -133,6 +133,26 @@
   }
 }
 
+@keyframes btn-blink-glow {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 1px rgba(255, 193, 71, 0.55),
+      0 0 14px rgba(255, 179, 71, 0.45),
+      0 8px 22px rgba(224, 149, 31, 0.28);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow:
+      0 0 0 2px rgba(255, 220, 140, 0.95),
+      0 0 28px rgba(255, 193, 71, 0.85),
+      0 10px 28px rgba(255, 147, 26, 0.45);
+    filter: brightness(1.18);
+  }
+}
+
 /* Gentle "wave" motion for the brand logo (bob + tilt), with a soft glow pulse. */
 @keyframes logo-wave {
   0%,
@@ -423,6 +443,13 @@
   }
   .btn-block {
     width: 100%;
+  }
+
+  .btn-blink {
+    animation: btn-blink-glow 1.15s ease-in-out infinite;
+  }
+  .btn-blink:disabled {
+    animation: none;
   }
 
   /* ---------- Inputs ---------- */
@@ -1944,7 +1971,126 @@
   .pkg-chip.current {
     color: var(--color-solar-300); border-color: var(--color-border-strong);
     background: color-mix(in oklab, var(--color-solar-400) 14%, transparent);
+    box-shadow: 0 0 0 1px rgba(255, 193, 71, 0.18), 0 0 16px rgba(255, 147, 26, 0.18);
   }
+
+  .dash-upgrade-card {
+    overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 0% 0%, rgba(255, 179, 71, 0.08), transparent 55%),
+      radial-gradient(100% 80% at 100% 100%, rgba(34, 197, 94, 0.06), transparent 50%),
+      var(--color-card);
+  }
+  .dash-upgrade-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) auto minmax(0, 1fr);
+    gap: 0;
+    align-items: stretch;
+  }
+  .dash-upgrade-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: 0.15rem 0.25rem;
+  }
+  .dash-upgrade-col .card-title {
+    margin-bottom: 0.85rem;
+  }
+  .dash-upgrade-divider {
+    width: 1px;
+    align-self: stretch;
+    margin: 0 1.15rem;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      rgba(255, 193, 71, 0.28) 18%,
+      rgba(255, 193, 71, 0.28) 82%,
+      transparent
+    );
+  }
+  .pkg-progress-track {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.15rem;
+  }
+  .pkg-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+  }
+  .pkg-step-line {
+    width: 0.7rem;
+    height: 2px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .pkg-step-line.filled {
+    background: linear-gradient(90deg, rgba(34, 197, 94, 0.75), rgba(255, 179, 71, 0.75));
+  }
+  .dash-upgrade-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+    margin-bottom: 0.95rem;
+  }
+  .dash-upgrade-meta-item {
+    padding: 0.65rem 0.75rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: rgba(0, 0, 0, 0.28);
+  }
+  .dash-upgrade-meta-item span {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 0.28rem;
+  }
+  .dash-upgrade-meta-item strong {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--color-foreground);
+    font-weight: 700;
+  }
+  .dash-upgrade-meta-item strong.next {
+    color: var(--color-solar-300);
+  }
+  .dash-upgrade-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: center;
+  }
+  .dash-upgrade-hint {
+    font-size: 0.82rem;
+    margin: 0.75rem 0 0;
+  }
+
+  @media (max-width: 860px) {
+    .dash-upgrade-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    .dash-upgrade-divider {
+      width: auto;
+      height: 1px;
+      margin: 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 193, 71, 0.28) 18%,
+        rgba(255, 193, 71, 0.28) 82%,
+        transparent
+      );
+    }
+    .dash-upgrade-col {
+      padding: 0;
+    }
+  }
+
   .pkg-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; }
   .pkg-card {
     padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: rgba(0,0,0,0.28);

@@ -270,6 +270,7 @@ export default function FalconApp() {
       globalPool: bigint;
       matrixPerLevel: bigint;
       globalPerLevel: bigint;
+      ctoPerRank: bigint[];
     }[]
   >([]);
   const [ctoThresholds, setCtoThresholds] = useState<bigint[]>([]);
@@ -488,6 +489,7 @@ export default function FalconApp() {
       setPkgRows(
         pkgResults.map((p, idx) => {
           const id = idx + 1;
+          const emptyRanks = [0n, 0n, 0n, 0n, 0n];
           if (!p) {
             return {
               id,
@@ -499,8 +501,14 @@ export default function FalconApp() {
               globalPool: 0n,
               matrixPerLevel: 0n,
               globalPerLevel: 0n,
+              ctoPerRank: emptyRanks,
             };
           }
+          const rawRanks = (p.ctoPerRank ?? p[8] ?? emptyRanks) as {
+            length?: number;
+            [i: number]: unknown;
+          };
+          const ctoPerRank = [0, 1, 2, 3, 4].map((i) => BigInt(rawRanks[i] ?? 0));
           return {
             id,
             price: BigInt(p.price ?? p[0] ?? 0),
@@ -511,6 +519,7 @@ export default function FalconApp() {
             globalPool: BigInt(p.globalPool ?? p[5] ?? 0),
             matrixPerLevel: BigInt(p.matrixPerLevel ?? p[6] ?? 0),
             globalPerLevel: BigInt(p.globalPerLevel ?? p[7] ?? 0),
+            ctoPerRank,
           };
         }),
       );
@@ -1625,6 +1634,22 @@ export default function FalconApp() {
     showToast("Copied");
   }
 
+  function incomeLevelLabel(row: IncomeRow) {
+    if ((row.incomeType === 2 || row.incomeType === 3) && row.meta > 0n) {
+      return `L${row.meta.toString()}`;
+    }
+    return "—";
+  }
+
+  const nextPackageConfig = pkgRows.find((p) => p.id === currentPackage + 1);
+  const nextPackagePriceLabel =
+    nextPackageConfig && nextPackageConfig.price > 0n
+      ? `$${formatUnits(nextPackageConfig.price, tokenDecimals)}`
+      : `$${PACKAGE_PRICES_USD[currentPackage + 1] || 0}`;
+
+  const canUpgrade =
+    Boolean(account) && registered && currentPackage >= 1 && currentPackage < 5;
+
   const nextUpgradeHint =
     !account
       ? "Connect wallet to see next upgrade."
@@ -1632,7 +1657,9 @@ export default function FalconApp() {
         ? "Register & buy Starter first."
         : currentPackage >= 5
           ? "You are on Crown — highest package."
-          : `Next: ${PACKAGE_NAMES[currentPackage + 1]} ($${PACKAGE_PRICES_USD[currentPackage + 1]})`;
+          : currentPackage < 1
+            ? "Buy Starter first to unlock upgrades."
+            : `Next: ${PACKAGE_NAMES[currentPackage + 1]} (${nextPackagePriceLabel})`;
 
   const historyPages = Math.max(1, Math.ceil(historyTotal / PAGE_SIZE) || 1);
   const downlinePages = Math.max(1, Math.ceil(downlineMembers.length / PAGE_SIZE) || 1);
@@ -1863,17 +1890,74 @@ export default function FalconApp() {
           ))}
         </div>
 
-        <div className="card" style={{ marginBottom: "1rem" }}>
-          <h2 className="card-title">Package Progress</h2>
-          <div className="pkg-progress">
-            {[1, 2, 3, 4, 5].map((id) => (
-              <span
-                key={id}
-                className={`pkg-chip${currentPackage > id ? " done" : ""}${currentPackage === id ? " current" : ""}`}
-              >
-                {PACKAGE_NAMES[id]}
-              </span>
-            ))}
+        <div className="card dash-upgrade-card" style={{ marginBottom: "1rem" }}>
+          <div className="dash-upgrade-grid">
+            <div className="dash-upgrade-col">
+              <h2 className="card-title">Package Progress</h2>
+              <div className="pkg-progress pkg-progress-track">
+                {[1, 2, 3, 4, 5].map((id, idx) => (
+                  <div key={id} className="pkg-step">
+                    {idx > 0 ? (
+                      <span
+                        className={`pkg-step-line${currentPackage >= id ? " filled" : ""}`}
+                        aria-hidden
+                      />
+                    ) : null}
+                    <span
+                      className={`pkg-chip${currentPackage > id ? " done" : ""}${currentPackage === id ? " current" : ""}`}
+                    >
+                      {PACKAGE_NAMES[id]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="dash-upgrade-divider" aria-hidden />
+
+            <div className="dash-upgrade-col dash-upgrade-actions">
+              <h2 className="card-title">Upgrade Package</h2>
+              <div className="dash-upgrade-meta">
+                <div className="dash-upgrade-meta-item">
+                  <span>Current</span>
+                  <strong>{currentPackage ? pkgName(currentPackage) : "None"}</strong>
+                </div>
+                <div className="dash-upgrade-meta-item">
+                  <span>Next</span>
+                  <strong className={canUpgrade ? "next" : ""}>
+                    {canUpgrade
+                      ? `${PACKAGE_NAMES[currentPackage + 1]} · ${nextPackagePriceLabel}`
+                      : currentPackage >= 5
+                        ? "Max reached"
+                        : "—"}
+                  </strong>
+                </div>
+              </div>
+              <div className="dash-upgrade-btns">
+                <button
+                  className={`btn btn-primary${canUpgrade && !busy && !staticLoading ? " btn-blink" : ""}`}
+                  type="button"
+                  disabled={!canUpgrade || busy || staticLoading}
+                  onClick={() => void onUpgrade()}
+                >
+                  {canUpgrade
+                    ? `Upgrade to ${PACKAGE_NAMES[currentPackage + 1]}`
+                    : currentPackage >= 5
+                      ? "Max Package Reached"
+                      : "Upgrade Package"}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={() => setTab("packages")}
+                >
+                  View Packages
+                </button>
+              </div>
+              {!canUpgrade ? (
+                <p className="text-muted dash-upgrade-hint">{nextUpgradeHint}</p>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -1885,7 +1969,7 @@ export default function FalconApp() {
                 ["Referral", incomePools.direct],
                 ["Matrix", incomePools.matrix],
                 ["Global", incomePools.global],
-                ["CTO", incomePools.cto],
+                ["Rank", incomePools.cto],
                 ["Secure Fund", incomePools.secure],
               ] as const
             ).map(([label, val]) => (
@@ -1930,7 +2014,7 @@ export default function FalconApp() {
               ["Referral", incomePools.direct],
               ["Matrix", incomePools.matrix],
               ["Global", incomePools.global],
-              ["CTO", incomePools.cto],
+              ["Rank", incomePools.cto],
               ["Secure", incomePools.secure],
             ] as const
           ).map(([label, val]) => (
@@ -1988,7 +2072,7 @@ export default function FalconApp() {
                   <th>Amount</th>
                   <th>From</th>
                   <th>Package</th>
-                  <th>Meta</th>
+                  <th>Level</th>
                   <th>Time</th>
                 </tr>
               </thead>
@@ -2022,7 +2106,7 @@ export default function FalconApp() {
                       <td>{fmtUsd(r.amount, tokenDecimals)}</td>
                       <td className="font-mono">{shortAddr(r.from)}</td>
                       <td>{pkgName(r.packageId)}</td>
-                      <td>{String(r.meta)}</td>
+                      <td>{incomeLevelLabel(r)}</td>
                       <td className="income-col-time">{fmtTime(r.timestamp)}</td>
                     </tr>
                   ))
@@ -2107,9 +2191,16 @@ export default function FalconApp() {
               ? fetchGlobalTreeData(addr, matrixPkg)
               : fetchMatrixTreeData(addr, matrixPkg)
           }
-          onUpgrade={() => {
-            setTab("packages");
-          }}
+          onUpgrade={() => void onUpgrade()}
+          canUpgrade={canUpgrade}
+          upgradeLabel={
+            canUpgrade
+              ? `Upgrade to ${PACKAGE_NAMES[currentPackage + 1]}`
+              : currentPackage >= 5
+                ? "Max Package Reached"
+                : "Upgrade Package"
+          }
+          upgradeDisabled={!canUpgrade || busy || staticLoading}
         />
 
         <div className="card" style={{ marginTop: "1rem" }}>
@@ -2155,7 +2246,7 @@ export default function FalconApp() {
             </div>
           )}
           <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: "0.85rem" }}>
-            CTO thresholds:{" "}
+            Rank thresholds:{" "}
             {ctoThresholds.length
               ? ctoThresholds.map((t, i) => `Rank${i + 1}=${String(t)}`).join(" · ")
               : "Rank1=27 · Rank2=243 · Rank3=2187 · Rank4=19683 · Rank5=59049"}{" "}
@@ -2385,16 +2476,29 @@ export default function FalconApp() {
           <h2 className="card-title">Upgrade Package</h2>
           <p className="text-muted" style={{ fontSize: "0.88rem", margin: "0 0 1rem" }}>
             Starter → Silver → Gold → Diamond → Crown (sequential)
+            {canUpgrade ? (
+              <>
+                {" "}
+                · Next:{" "}
+                <strong style={{ color: "var(--color-solar-300)" }}>
+                  {PACKAGE_NAMES[currentPackage + 1]} ({nextPackagePriceLabel})
+                </strong>
+              </>
+            ) : null}
           </p>
           {(staticLoading || userLoading) && <div className="loading-bar mb-3" />}
           <div className="mt-4 flex flex-wrap gap-2">
             <button
-              className="btn btn-primary"
+              className={`btn btn-primary${canUpgrade && !busy && !staticLoading ? " btn-blink" : ""}`}
               type="button"
-              disabled={!account || busy || currentPackage >= 5 || staticLoading}
+              disabled={!canUpgrade || busy || staticLoading}
               onClick={() => void onUpgrade()}
             >
-              Upgrade Package
+              {canUpgrade
+                ? `Upgrade to ${PACKAGE_NAMES[currentPackage + 1]}`
+                : currentPackage >= 5
+                  ? "Max Package Reached"
+                  : "Upgrade Package"}
             </button>
           </div>
           <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: "1rem" }}>
@@ -2416,6 +2520,7 @@ export default function FalconApp() {
                   globalPool: 0n,
                   matrixPerLevel: 0n,
                   globalPerLevel: 0n,
+                  ctoPerRank: [0n, 0n, 0n, 0n, 0n],
                 }))
             ).map((p) => (
               <div className="pkg-card" key={p.id}>
@@ -2429,7 +2534,10 @@ export default function FalconApp() {
                   Referral {fmtUsd(p.directBonus, tokenDecimals)} · Matrix {fmtUsd(p.matrixPool, tokenDecimals)} ·
                   Global {fmtUsd(p.globalPool, tokenDecimals)}
                   <br />
-                  CTO {fmtUsd(p.ctoPool, tokenDecimals)} · Secure {fmtUsd(p.secureFund, tokenDecimals)}
+                  Rank pool {fmtUsd(p.ctoPool, tokenDecimals)} · Secure {fmtUsd(p.secureFund, tokenDecimals)}
+                  <br />
+                  Matrix/lvl {fmtUsd(p.matrixPerLevel, tokenDecimals)} · Global/lvl{" "}
+                  {fmtUsd(p.globalPerLevel, tokenDecimals)}
                 </div>
               </div>
             ))}
@@ -2446,7 +2554,7 @@ export default function FalconApp() {
                   <th>Referral</th>
                   <th>Matrix</th>
                   <th>Global</th>
-                  <th>CTO</th>
+                  <th>Rank</th>
                   <th>Secure</th>
                 </tr>
               </thead>
@@ -2465,33 +2573,96 @@ export default function FalconApp() {
               </tbody>
             </table>
           </div>
+          <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: "0.75rem" }}>
+            Totals match package price (Referral + Matrix + Global + Rank + Secure).
+          </p>
         </div>
-        <div className="card">
+        <div className="card" style={{ marginBottom: "1rem" }}>
           <h2 className="card-title">Per-Level Income (Matrix / Global)</h2>
           <div style={{ overflowX: "auto" }}>
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Package</th>
+                  <th>Matrix pool</th>
                   <th>Matrix / level</th>
+                  <th>Global pool</th>
                   <th>Global / level</th>
                   <th>Levels</th>
+                  <th>Check</th>
                 </tr>
               </thead>
               <tbody>
-                {pkgRows.map((p) => (
-                  <tr key={p.id}>
-                    <td>{PACKAGE_NAMES[p.id]}</td>
-                    <td>{fmtUsd(p.matrixPerLevel, tokenDecimals)}</td>
-                    <td>{fmtUsd(p.globalPerLevel, tokenDecimals)}</td>
-                    <td>10</td>
-                  </tr>
-                ))}
+                {pkgRows.map((p) => {
+                  const levels = 10n;
+                  const matrixOk = p.matrixPerLevel * levels === p.matrixPool;
+                  const globalOk = p.globalPerLevel * levels === p.globalPool;
+                  return (
+                    <tr key={p.id}>
+                      <td>{PACKAGE_NAMES[p.id]}</td>
+                      <td>{fmtUsd(p.matrixPool, tokenDecimals)}</td>
+                      <td>{fmtUsd(p.matrixPerLevel, tokenDecimals)}</td>
+                      <td>{fmtUsd(p.globalPool, tokenDecimals)}</td>
+                      <td>{fmtUsd(p.globalPerLevel, tokenDecimals)}</td>
+                      <td>10</td>
+                      <td style={{ color: matrixOk && globalOk ? "var(--color-success)" : "var(--color-danger)" }}>
+                        {matrixOk && globalOk ? "OK" : "Mismatch"}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: "0.85rem" }}>
-            3-wide × 10-depth auto-fill matrix. Each upline level earns matrix + global.
+            Global / Matrix per-level × 10 levels should equal their pool totals.
+          </p>
+        </div>
+        <div className="card">
+          <h2 className="card-title">Rank Distribution (per rank)</h2>
+          <div style={{ overflowX: "auto" }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Package</th>
+                  <th>Rank pool</th>
+                  <th>Rank 1</th>
+                  <th>Rank 2</th>
+                  <th>Rank 3</th>
+                  <th>Rank 4</th>
+                  <th>Rank 5</th>
+                  <th>Check</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pkgRows.map((p) => {
+                  const ranks = p.ctoPerRank?.length
+                    ? p.ctoPerRank
+                    : [0n, 0n, 0n, 0n, 0n];
+                  const sum = ranks.reduce((a, b) => a + b, 0n);
+                  const ok = sum === p.ctoPool;
+                  return (
+                    <tr key={p.id}>
+                      <td>{PACKAGE_NAMES[p.id]}</td>
+                      <td>{fmtUsd(p.ctoPool, tokenDecimals)}</td>
+                      {ranks.map((amt, i) => (
+                        <td key={i}>{fmtUsd(amt, tokenDecimals)}</td>
+                      ))}
+                      <td style={{ color: ok ? "var(--color-success)" : "var(--color-danger)" }}>
+                        {ok ? "OK" : "Mismatch"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: "0.85rem" }}>
+            Rank thresholds:{" "}
+            {ctoThresholds.length
+              ? ctoThresholds.map((t, i) => `R${i + 1}=${String(t)}`).join(" · ")
+              : "R1=27 · R2=243 · R3=2187 · R4=19683 · R5=59049"}{" "}
+            downline. Each qualified rank gets its share from the Rank pool.
           </p>
         </div>
       </section>

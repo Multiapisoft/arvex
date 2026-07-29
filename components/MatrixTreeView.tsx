@@ -72,6 +72,10 @@ type MatrixTreeViewProps = {
   onCopy: (text: string) => void;
   loadSubtree: (address: string) => Promise<MatrixTreeData>;
   onUpgrade?: () => void;
+  /** Highlight upgrade CTA when user can buy the next package. */
+  canUpgrade?: boolean;
+  upgradeLabel?: string;
+  upgradeDisabled?: boolean;
 };
 
 function isFilled(addr: string) {
@@ -178,7 +182,7 @@ function TreeBoard({
   );
   const isMeRoot = data.root.toLowerCase() === account.toLowerCase();
   const rootLabel = isMeRoot ? "You" : shortAddr(data.root);
-  const seatTag = (seat: MatrixSeatInfo, fallback: string) => {
+  const seatTag = (seat: MatrixSeatInfo) => {
     if (!isFilled(seat.address)) return "Open";
     if (globalMode) return `${pkgName(packageId)} · Global`;
     return `${pkgName(packageId)} · ${seat.active ? "Active" : "Inactive"}`;
@@ -224,7 +228,7 @@ function TreeBoard({
               <MemberNode
                 seat={child}
                 label={isFilled(child.address) ? shortAddr(child.address) : "Empty"}
-                levelLabel={seatTag(child, "Open")}
+                levelLabel={seatTag(child)}
                 isYou={
                   isFilled(child.address) && child.address.toLowerCase() === account.toLowerCase()
                 }
@@ -257,7 +261,7 @@ function TreeBoard({
                   key={idx}
                   seat={gc}
                   label={isFilled(gc.address) ? shortAddr(gc.address) : "Empty"}
-                  levelLabel={seatTag(gc, "Open")}
+                  levelLabel={seatTag(gc)}
                   size="sm"
                   isYou={
                     isFilled(gc.address) && gc.address.toLowerCase() === account.toLowerCase()
@@ -360,6 +364,9 @@ export function MatrixTreeView({
   onCopy,
   loadSubtree,
   onUpgrade,
+  canUpgrade = false,
+  upgradeLabel = "Upgrade Package",
+  upgradeDisabled = false,
 }: MatrixTreeViewProps) {
   const [pkgOpen, setPkgOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -748,18 +755,12 @@ export function MatrixTreeView({
           icon={<Users className="h-5 w-5" />}
         />
         <StatCard
-          label={isGlobal ? `Qualified · ${pkgLabel}` : `Active Members · ${pkgLabel}`}
-          value={counts.active}
-          tone="green"
-          icon={<GitBranch className="h-5 w-5" />}
-        />
-        <StatCard
           label={earningsLabel}
           value={earningsValue || "—"}
           tone="leaf"
           icon={<Wallet className="h-5 w-5" />}
         />
-        <StatCard label="CTO Rank" value={data.ctoRank || "—"} tone="amber" icon={<Layers className="h-5 w-5" />} />
+        <StatCard label="Rank" value={data.ctoRank || "—"} tone="amber" icon={<Layers className="h-5 w-5" />} />
       </div>
 
       <div className="mx-dash-grid">
@@ -824,8 +825,13 @@ export function MatrixTreeView({
                 : "Click any filled node to open its downline · Home / Up / breadcrumb navigate main view"}
             </p>
             {onUpgrade && (
-              <button type="button" className="btn btn-primary mx-upgrade-btn" onClick={onUpgrade}>
-                Upgrade Package
+              <button
+                type="button"
+                className={`btn btn-primary mx-upgrade-btn${canUpgrade && !upgradeDisabled ? " btn-blink" : ""}`}
+                disabled={upgradeDisabled || (!canUpgrade && activePackageId >= 5)}
+                onClick={onUpgrade}
+              >
+                {upgradeLabel}
                 <ArrowUpRight className="h-4 w-4" />
               </button>
             )}
