@@ -504,10 +504,13 @@ export default function FalconApp() {
               ctoPerRank: emptyRanks,
             };
           }
-          const rawRanks = (p.ctoPerRank ?? p[8] ?? emptyRanks) as {
-            length?: number;
-            [i: number]: unknown;
-          };
+          const rawRanks = (p.ctoPerRank ?? p[8] ?? emptyRanks) as readonly (
+            | bigint
+            | number
+            | string
+            | boolean
+            | undefined
+          )[];
           const ctoPerRank = [0, 1, 2, 3, 4].map((i) => BigInt(rawRanks[i] ?? 0));
           return {
             id,
