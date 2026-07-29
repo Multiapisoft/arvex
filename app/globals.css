@@ -1116,6 +1116,32 @@
     }
   }
 
+  /* Income History — keep table layout, scroll on small screens */
+  .income-col-time {
+    white-space: nowrap;
+  }
+  .income-table-wrap {
+    margin: 0 -0.15rem;
+  }
+  @media (max-width: 768px) {
+    .income-data-table {
+      font-size: 0.8rem;
+    }
+    .income-data-table th,
+    .income-data-table td {
+      padding: 0.6rem 0.65rem;
+    }
+  }
+  @media (max-width: 480px) {
+    .income-data-table {
+      font-size: 0.76rem;
+    }
+    .income-data-table th,
+    .income-data-table td {
+      padding: 0.55rem 0.55rem;
+    }
+  }
+
   /* ---------- Matrix dashboard (3×3 tree — solar theme) ---------- */
   .mx-dash {
     display: flex;

@@ -133,7 +133,7 @@ export function AppShell({
         </header>
 
         <main className="flex-1 px-4 pb-24 pt-5 md:px-6 md:pb-8">
-          <div className={cn("mx-auto w-full max-w-5xl", contentClassName)}>{children}</div>
+          <div className={cn("mx-auto w-full", contentClassName)}>{children}</div>
         </main>
       </div>
 

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BrowserProvider,
@@ -19,6 +18,8 @@ import {
   Loader2,
   Package,
   RefreshCw,
+  Shield,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import {
@@ -71,9 +72,14 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "matrix", label: "Matrix / Global", icon: GitBranch },
   { id: "team", label: "My Team", icon: Users },
   { id: "packages", label: "Packages", icon: Package },
-  // { id: "secure", label: "Secure Fund", icon: Shield },
-  // { id: "admin", label: "Admin" },
+  { id: "secure", label: "Secure Fund", icon: Shield },
 ];
+
+const ADMIN_TAB: { id: TabId; label: string; icon: typeof LayoutDashboard } = {
+  id: "admin",
+  label: "Admin",
+  icon: ShieldCheck,
+};
 
 /** Primary items surfaced in the mobile bottom navigation (Solar-style). */
 const PRIMARY_NAV: MobileNavItem[] = [
@@ -87,6 +93,35 @@ const STORAGE_KEY = "fc_contract_address";
 const WALLET_FLAG_KEY = "fc_wallet_connected";
 const WALLET_ADDR_KEY = "fc_wallet_address";
 const PAGE_SIZE = 10;
+
+/** Normalize ethers Result / array / tuple into up to 3 filled addresses. */
+function toAddr3(raw: unknown): string[] {
+  const list = raw as { length?: number; [i: number]: unknown } | null;
+  return [0, 1, 2].map((i) => {
+    const v = list?.[i];
+    const s = v != null ? String(v) : "";
+    return s && s !== ZeroAddress && isAddress(s) ? s : "";
+  });
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 250): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      last = e;
+      if (i + 1 < attempts) await sleep(delayMs * (i + 1));
+    }
+  }
+  throw last;
+}
 
 declare global {
   interface Window {
@@ -185,6 +220,8 @@ export default function FalconApp() {
     children: ["", "", ""] as string[],
     childSeats: [] as MatrixSeatInfo[],
     grandchildren: [[], [], []] as MatrixSeatInfo[][],
+    matrixDirects: 0,
+    globalQualified: false,
   });
   const [allMatrix, setAllMatrix] = useState<
     { pkg: number; active: boolean; downline: bigint; rank: number; children: number }[]
@@ -203,6 +240,8 @@ export default function FalconApp() {
   const [downlinePkg, setDownlinePkg] = useState(1);
   const [downlinePage, setDownlinePage] = useState(0);
   const [downlineLoading, setDownlineLoading] = useState(false);
+  const [downlineError, setDownlineError] = useState("");
+  const downlineLoadSeq = useRef(0);
   const [directsLoading, setDirectsLoading] = useState(false);
   const [downlineMembers, setDownlineMembers] = useState<
     {
@@ -241,7 +280,13 @@ export default function FalconApp() {
     cycle: 0,
     next: 0,
     deployed: 0,
+    targetPercent: 120,
+    cyclePool: 0n,
   });
+  const [sfPayoutDue, setSfPayoutDue] = useState(0n);
+  const [sfTargetAmount, setSfTargetAmount] = useState(0n);
+  const [sfClaimed, setSfClaimed] = useState(false);
+  const [sfTargetInput, setSfTargetInput] = useState("120");
 
   // On-chain admin
   const [isOwner, setIsOwner] = useState(false);
@@ -250,7 +295,9 @@ export default function FalconApp() {
   const [newTreasury, setNewTreasury] = useState("");
   const [sfDistributeCycle, setSfDistributeCycle] = useState("");
   const [sfDistributeRecipients, setSfDistributeRecipients] = useState("");
-  const [sfDistributeAmounts, setSfDistributeAmounts] = useState("");
+  const [rescueTokenAddr, setRescueTokenAddr] = useState("");
+  const [rescueTo, setRescueTo] = useState("");
+  const [rescueAmount, setRescueAmount] = useState("");
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -268,15 +315,21 @@ export default function FalconApp() {
     const saved = localStorage.getItem(STORAGE_KEY);
     // Prefer env/default when localStorage still has a previous deploy address.
     const legacy = new Set([
-      // "0xb573d4159956e798e8f8c228481de1cbab135f72",
-      // "0x9ddb41afa46d87a2988b4e057f59a4234a62c0a6",
+      "0xb573d4159956e798e8f8c228481de1cbab135f72",
+      "0x9ddb41afa46d87a2988b4e057f59a4234a62c0a6",
       "0xd1692deb1670d286376ccab9f0a3662d72106941",
+      "0xbc9e7f1413989ea5dca5ac27dd499bab742696fe",
     ]);
     if (saved && isAddress(saved) && !legacy.has(saved.toLowerCase())) {
       setContractAddr(saved);
       setContractInput(saved);
     } else if (saved && legacy.has(saved.toLowerCase())) {
       localStorage.setItem(STORAGE_KEY, DEFAULT_CONTRACT_ADDRESS);
+      setContractAddr(DEFAULT_CONTRACT_ADDRESS);
+      setContractInput(DEFAULT_CONTRACT_ADDRESS);
+    } else {
+      setContractAddr(DEFAULT_CONTRACT_ADDRESS);
+      setContractInput(DEFAULT_CONTRACT_ADDRESS);
     }
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
@@ -409,7 +462,7 @@ export default function FalconApp() {
       setPaymentToken(tokenAddr);
       const token = new Contract(tokenAddr, ERC20_ABI, provider);
 
-      const [sym, onchainDec, users, pkgResults, thresholdResults, bal, cycle, next, deployed] =
+      const [sym, onchainDec, users, pkgResults, thresholdResults, bal, cycle, next, deployed, targetPct] =
         await Promise.all([
           token.symbol().catch(() => "USDC"),
           c.paymentDecimals().catch(() => token.decimals().catch(() => 18)),
@@ -420,7 +473,14 @@ export default function FalconApp() {
           c.secureFundCycle().catch(() => 0n),
           c.nextSecureFundAvailableAt().catch(() => 0n),
           c.deployedAt().catch(() => 0n),
+          c.secureFundTargetPercent().catch(() => 120),
         ]);
+
+      const cycleNum = Number(cycle);
+      const cyclePool =
+        cycleNum > 0
+          ? BigInt(await c.secureFundCyclePool(cycleNum).catch(() => 0n))
+          : 0n;
 
       setTokenSymbol(String(sym));
       setTokenDecimals(Number(onchainDec));
@@ -455,12 +515,16 @@ export default function FalconApp() {
         }),
       );
       setCtoThresholds(thresholdResults.map((t) => BigInt(t)));
+      const pct = Number(targetPct);
       setSf({
         balance: BigInt(bal),
-        cycle: Number(cycle),
+        cycle: cycleNum,
         next: Number(next),
         deployed: Number(deployed),
+        targetPercent: pct,
+        cyclePool,
       });
+      setSfTargetInput(String(pct));
     } catch {
       // Contract not set / not deployed yet — UI still usable
     } finally {
@@ -541,7 +605,7 @@ export default function FalconApp() {
       const tokenAddr = paymentToken || DEFAULT_PAYMENT_TOKEN;
       const token = new Contract(tokenAddr, ERC20_ABI, provider);
 
-      const [u, pools, secureElig, bal, allow, owner, pausedVal, treasuryVal, matrixInfos] =
+      const [u, pools, secureElig, bal, allow, owner, pausedVal, treasuryVal, matrixInfos, payoutDue, targetAmt, sfCycle] =
         await Promise.all([
           c.users(account),
           c.getIncomeTotals(account).catch(() => null),
@@ -552,7 +616,19 @@ export default function FalconApp() {
           c.paused().catch(() => false),
           c.treasury().catch(() => ""),
           Promise.all([1, 2, 3, 4, 5].map((id) => c.matrices(account, id).catch(() => null))),
+          c.secureFundPayoutDue(account).catch(() => 0n),
+          c.secureFundTargetAmount(account).catch(() => 0n),
+          c.secureFundCycle().catch(() => 0n),
         ]);
+
+      const cycleNum = Number(sfCycle);
+      const claimed =
+        cycleNum > 0
+          ? Boolean(await c.secureFundClaimed(cycleNum, account).catch(() => false))
+          : false;
+      setSfPayoutDue(BigInt(payoutDue));
+      setSfTargetAmount(BigInt(targetAmt));
+      setSfClaimed(claimed);
 
       const reg = Boolean(u.registered ?? u[0]);
       setRegistered(reg);
@@ -619,99 +695,144 @@ export default function FalconApp() {
   }, [account, contractAddr, getReadContract, getReadProvider, paymentToken]);
 
   /** Walk matrix children BFS to list every downline address under the account. */
-  const loadDownline = useCallback(async () => {
-    if (!account) {
-      setDownlineMembers([]);
-      return;
-    }
-    setDownlineLoading(true);
-    try {
-      const c = await getReadContract();
-      const MAX_MEMBERS = 300;
-      const seen = new Set<string>([account.toLowerCase()]);
-      const queue: { addr: string; level: number }[] = [{ addr: account, level: 0 }];
-      const members: {
-        address: string;
-        level: number;
-        packageId: number;
-        invested: bigint;
-        earned: bigint;
-        joinedAt: number;
-        active: boolean;
-        childCount: number;
-        downline: string;
-      }[] = [];
+  const loadDownline = useCallback(
+    async (pkgOverride?: number) => {
+      if (!account) {
+        setDownlineMembers([]);
+        setDownlineError("");
+        return;
+      }
+      const pkgId =
+        pkgOverride && pkgOverride >= 1 && pkgOverride <= 5 ? pkgOverride : downlinePkg;
+      const seq = ++downlineLoadSeq.current;
+      setDownlineLoading(true);
+      setDownlineError("");
+      setDownlinePage(0);
+      try {
+        const c = await getReadContract();
+        const MAX_MEMBERS = 300;
+        const BATCH = 8;
+        const seen = new Set<string>([account.toLowerCase()]);
+        const queue: { addr: string; level: number }[] = [{ addr: account, level: 0 }];
+        const members: {
+          address: string;
+          level: number;
+          packageId: number;
+          invested: bigint;
+          earned: bigint;
+          joinedAt: number;
+          active: boolean;
+          childCount: number;
+          downline: string;
+        }[] = [];
 
-      while (queue.length > 0 && members.length < MAX_MEMBERS) {
-        const batch = queue.splice(0, Math.min(queue.length, 24));
-        const childBatches = await Promise.all(
-          batch.map(async ({ addr, level }) => {
-            const childrenRaw: string[] = await c
-              .getMatrixChildren(addr, downlinePkg)
-              .catch(() => [ZeroAddress, ZeroAddress, ZeroAddress]);
-            return { level, children: [0, 1, 2].map((i) => String(childrenRaw[i] || "")) };
-          }),
-        );
+        async function childrenOf(addr: string): Promise<string[]> {
+          const raw = await withRetry(() => c.getMatrixChildren(addr, pkgId), 3, 300);
+          return toAddr3(raw);
+        }
 
-        const nextAddrs: { addr: string; level: number }[] = [];
-        for (const { level, children } of childBatches) {
-          for (const child of children) {
-            if (!child || child === ZeroAddress || !isAddress(child)) continue;
-            const key = child.toLowerCase();
-            if (seen.has(key)) continue;
-            seen.add(key);
-            nextAddrs.push({ addr: child, level: level + 1 });
+        while (queue.length > 0 && members.length < MAX_MEMBERS) {
+          if (seq !== downlineLoadSeq.current) return;
+          const batch = queue.splice(0, Math.min(queue.length, BATCH));
+          const childBatches = await Promise.all(
+            batch.map(async ({ addr, level }) => {
+              try {
+                const children = await childrenOf(addr);
+                return { level, children };
+              } catch {
+                // Soft-fail a single node so one RPC blip doesn't wipe the whole tree
+                return { level, children: [] as string[] };
+              }
+            }),
+          );
+
+          const nextAddrs: { addr: string; level: number }[] = [];
+          for (const { level, children } of childBatches) {
+            for (const child of children) {
+              const key = child.toLowerCase();
+              if (seen.has(key)) continue;
+              seen.add(key);
+              nextAddrs.push({ addr: child, level: level + 1 });
+            }
+          }
+
+          if (!nextAddrs.length) {
+            if (queue.length) await sleep(80);
+            continue;
+          }
+
+          const details = await Promise.all(
+            nextAddrs.map(async ({ addr, level }) => {
+              try {
+                const [tu, info] = await Promise.all([
+                  withRetry(() => c.users(addr), 2, 200),
+                  withRetry(() => c.matrices(addr, pkgId), 2, 200),
+                ]);
+                return {
+                  address: addr,
+                  level,
+                  packageId: Number(tu.currentPackage ?? tu[2] ?? 0),
+                  invested: BigInt(tu.totalInvested ?? tu[3] ?? 0),
+                  earned: BigInt(tu.totalEarned ?? tu[4] ?? 0),
+                  joinedAt: Number(tu.registeredAt ?? tu[6] ?? 0),
+                  active: Boolean(info.active ?? info[0]),
+                  childCount: Number(info.childCount ?? info[2] ?? 0),
+                  downline: String(info.downlineCount ?? info[3] ?? 0),
+                };
+              } catch {
+                return {
+                  address: addr,
+                  level,
+                  packageId: 0,
+                  invested: 0n,
+                  earned: 0n,
+                  joinedAt: 0,
+                  active: false,
+                  childCount: 0,
+                  downline: "0",
+                };
+              }
+            }),
+          );
+
+          if (seq !== downlineLoadSeq.current) return;
+
+          for (const row of details) {
+            if (members.length >= MAX_MEMBERS) break;
+            members.push(row);
+            queue.push({ addr: row.address, level: row.level });
+          }
+
+          // Ease public RPC pressure between BFS layers
+          if (queue.length) await sleep(60);
+        }
+
+        if (seq !== downlineLoadSeq.current) return;
+
+        // If BFS found nothing but contract reports downline, surface it for retry
+        if (members.length === 0) {
+          const info = await c.matrices(account, pkgId).catch(() => null);
+          const reported = Number(info?.downlineCount ?? info?.[3] ?? 0);
+          if (reported > 0) {
+            setDownlineError(
+              `Could not load ${reported} downline members (RPC). Tap Retry.`,
+            );
           }
         }
 
-        if (!nextAddrs.length) continue;
-
-        const details = await Promise.all(
-          nextAddrs.map(async ({ addr, level }) => {
-            try {
-              const [tu, info] = await Promise.all([c.users(addr), c.matrices(addr, downlinePkg)]);
-              return {
-                address: addr,
-                level,
-                packageId: Number(tu.currentPackage ?? tu[2] ?? 0),
-                invested: BigInt(tu.totalInvested ?? tu[3] ?? 0),
-                earned: BigInt(tu.totalEarned ?? tu[4] ?? 0),
-                joinedAt: Number(tu.registeredAt ?? tu[6] ?? 0),
-                active: Boolean(info.active ?? info[0]),
-                childCount: Number(info.childCount ?? info[2] ?? 0),
-                downline: String(info.downlineCount ?? info[3] ?? 0),
-              };
-            } catch {
-              return {
-                address: addr,
-                level,
-                packageId: 0,
-                invested: 0n,
-                earned: 0n,
-                joinedAt: 0,
-                active: false,
-                childCount: 0,
-                downline: "0",
-              };
-            }
-          }),
-        );
-
-        for (const row of details) {
-          if (members.length >= MAX_MEMBERS) break;
-          members.push(row);
-          queue.push({ addr: row.address, level: row.level });
+        setDownlineMembers(members);
+      } catch (e) {
+        console.error(e);
+        if (seq === downlineLoadSeq.current) {
+          setDownlineMembers([]);
+          setDownlineError("Failed to load matrix downline. Tap Retry.");
         }
+      } finally {
+        if (seq === downlineLoadSeq.current) setDownlineLoading(false);
       }
-
-      setDownlineMembers(members);
-    } catch (e) {
-      console.error(e);
-      setDownlineMembers([]);
-    } finally {
-      setDownlineLoading(false);
-    }
-  }, [account, downlinePkg, getReadContract]);
+    },
+    [account, downlinePkg, getReadContract],
+  );
 
   const loadIncome = useCallback(async () => {
     if (!account) return;
@@ -765,20 +886,12 @@ export default function FalconApp() {
         ctoRank: 0,
         children: [emptySeat(), emptySeat(), emptySeat()],
         grandchildren: [[], [], []],
+        matrixDirects: 0,
+        globalQualified: false,
       };
       if (!rootAddr || !isAddress(rootAddr) || pkgId < 1 || pkgId > 5) return empty;
 
       const c = await getReadContract();
-
-      /** Normalize ethers Result / array / tuple into 3 addresses. */
-      function toAddr3(raw: unknown): string[] {
-        const list = raw as { length?: number; [i: number]: unknown } | null;
-        return [0, 1, 2].map((i) => {
-          const v = list?.[i];
-          const s = v != null ? String(v) : "";
-          return s && s !== ZeroAddress && isAddress(s) ? s : "";
-        });
-      }
 
       async function seatOf(addr: string): Promise<MatrixSeatInfo> {
         if (!addr || addr === ZeroAddress || !isAddress(addr)) return emptySeat();
@@ -809,16 +922,176 @@ export default function FalconApp() {
             return Promise.all(toAddr3(gcRaw).map((a) => seatOf(a)));
           }),
         );
+        const matrixDirects = Number(info.childCount ?? info[2] ?? 0);
+        const globalQualified =
+          matrixDirects >= 3 ||
+          Boolean(await c.isGlobalPoolQualified(rootAddr, pkgId).catch(() => false));
 
         return {
           root: rootAddr,
           parent: String(info.parent ?? info[1] ?? ""),
           active: Boolean(info.active ?? info[0]),
-          childrenCount: Number(info.childCount ?? info[2] ?? 0),
+          childrenCount: matrixDirects,
           downline: String(info.downlineCount ?? info[3] ?? 0),
           ctoRank: Number(info.rank ?? info[4] ?? 0),
           children: childSeats,
           grandchildren,
+          matrixDirects,
+          globalQualified,
+        };
+      } catch {
+        return empty;
+      }
+    },
+    [getReadContract],
+  );
+
+  /**
+   * Global Autopool tree: only members who completed 3 matrix directs
+   * (`isGlobalPoolQualified` / childCount === 3). Placed in a 3-wide tree
+   * in matrix-BFS discovery order under the focused root.
+   */
+  const fetchGlobalTreeData = useCallback(
+    async (rootAddr: string, pkgId: number): Promise<MatrixTreeData> => {
+      const emptySeat = (): MatrixSeatInfo => ({
+        address: "",
+        active: false,
+        childCount: 0,
+        downline: "0",
+      });
+      const empty: MatrixTreeData = {
+        root: rootAddr,
+        parent: "",
+        active: false,
+        childrenCount: 0,
+        downline: "0",
+        ctoRank: 0,
+        children: [emptySeat(), emptySeat(), emptySeat()],
+        grandchildren: [[], [], []],
+        matrixDirects: 0,
+        globalQualified: false,
+      };
+      if (!rootAddr || !isAddress(rootAddr) || pkgId < 1 || pkgId > 5) return empty;
+
+      const c = await getReadContract();
+      const MAX_SCAN = 300;
+
+      type NodeMeta = {
+        address: string;
+        parent: string;
+        childCount: number;
+        downlineCount: string;
+        rank: number;
+        matrixActive: boolean;
+        qualified: boolean;
+        kids: string[];
+      };
+
+      async function readNode(addr: string): Promise<NodeMeta | null> {
+        if (!addr || addr === ZeroAddress || !isAddress(addr)) return null;
+        try {
+          const [info, kidsRaw, qual] = await Promise.all([
+            c.matrices(addr, pkgId),
+            c.getMatrixChildren(addr, pkgId).catch(() => null),
+            c.isGlobalPoolQualified(addr, pkgId).catch(() => false),
+          ]);
+          const childCount = Number(info.childCount ?? info[2] ?? 0);
+          return {
+            address: addr,
+            parent: String(info.parent ?? info[1] ?? ""),
+            childCount,
+            downlineCount: String(info.downlineCount ?? info[3] ?? 0),
+            rank: Number(info.rank ?? info[4] ?? 0),
+            matrixActive: Boolean(info.active ?? info[0]),
+            qualified: Boolean(qual) || childCount >= 3,
+            kids: toAddr3(kidsRaw),
+          };
+        } catch {
+          return null;
+        }
+      }
+
+      try {
+        const rootMeta = await readNode(rootAddr);
+        if (!rootMeta) return empty;
+
+        const byAddr = new Map<string, NodeMeta>();
+        byAddr.set(rootAddr.toLowerCase(), rootMeta);
+
+        const seen = new Set<string>([rootAddr.toLowerCase()]);
+        const queue = [...rootMeta.kids];
+        for (const k of rootMeta.kids) seen.add(k.toLowerCase());
+
+        while (queue.length > 0 && byAddr.size < MAX_SCAN) {
+          const batch = queue.splice(0, 8);
+          const nodes = await Promise.all(batch.map((a) => readNode(a)));
+          for (const node of nodes) {
+            if (!node) continue;
+            const key = node.address.toLowerCase();
+            if (byAddr.has(key)) continue;
+            byAddr.set(key, node);
+            for (const kid of node.kids) {
+              const kk = kid.toLowerCase();
+              if (!seen.has(kk)) {
+                seen.add(kk);
+                queue.push(kid);
+              }
+            }
+          }
+          if (queue.length) await sleep(40);
+        }
+
+        /** Qualified descendants under `addr` in matrix (excluding addr), matrix-BFS order. */
+        function qualifiedUnder(addr: string): string[] {
+          const start = byAddr.get(addr.toLowerCase());
+          if (!start) return [];
+          const out: string[] = [];
+          const q = [...start.kids];
+          const vis = new Set<string>([addr.toLowerCase()]);
+          while (q.length) {
+            const cur = q.shift()!;
+            const k = cur.toLowerCase();
+            if (vis.has(k)) continue;
+            vis.add(k);
+            const meta = byAddr.get(k);
+            if (!meta) continue;
+            if (meta.qualified) out.push(meta.address);
+            q.push(...meta.kids);
+          }
+          return out;
+        }
+
+        function seatFromQualified(addr: string): MatrixSeatInfo {
+          if (!addr) return emptySeat();
+          const meta = byAddr.get(addr.toLowerCase());
+          const under = qualifiedUnder(addr);
+          return {
+            address: addr,
+            active: true,
+            childCount: Math.min(3, under.length),
+            downline: String(under.length),
+          };
+        }
+
+        const underRoot = qualifiedUnder(rootAddr);
+        // Flat 3× fill: as members qualify they occupy the next Global seats in BFS order
+        const childAddrs = [underRoot[0] || "", underRoot[1] || "", underRoot[2] || ""];
+        const childSeats = childAddrs.map((a) => seatFromQualified(a));
+        const grandchildren = [0, 1, 2].map((c) =>
+          [0, 1, 2].map((i) => seatFromQualified(underRoot[3 + c * 3 + i] || "")),
+        );
+
+        return {
+          root: rootAddr,
+          parent: rootMeta.parent,
+          active: rootMeta.qualified,
+          childrenCount: Math.min(3, underRoot.length),
+          downline: String(underRoot.length),
+          ctoRank: rootMeta.rank,
+          children: childSeats,
+          grandchildren,
+          matrixDirects: rootMeta.childCount,
+          globalQualified: rootMeta.qualified,
         };
       } catch {
         return empty;
@@ -828,7 +1101,7 @@ export default function FalconApp() {
   );
 
   const loadMatrix = useCallback(
-    async (opts?: { root?: string; pkg?: number }) => {
+    async (opts?: { root?: string; pkg?: number; mode?: MatrixTreeMode }) => {
       if (!account) return;
       const root =
         opts?.root && isAddress(opts.root)
@@ -837,10 +1110,14 @@ export default function FalconApp() {
             ? matrixFocus
             : account;
       const pkgId = opts?.pkg && opts.pkg >= 1 && opts.pkg <= 5 ? opts.pkg : matrixPkg;
+      const mode = opts?.mode ?? matrixTreeMode;
       const seq = ++matrixLoadSeq.current;
       setMatrixLoading(true);
       try {
-        const tree = await fetchMatrixTreeData(root, pkgId);
+        const tree =
+          mode === "global"
+            ? await fetchGlobalTreeData(root, pkgId)
+            : await fetchMatrixTreeData(root, pkgId);
         if (seq !== matrixLoadSeq.current) return;
         setMatrixInfo({
           active: tree.active,
@@ -851,6 +1128,8 @@ export default function FalconApp() {
           children: tree.children.map((s) => s.address),
           childSeats: tree.children,
           grandchildren: tree.grandchildren,
+          matrixDirects: tree.matrixDirects ?? tree.childrenCount,
+          globalQualified: tree.globalQualified ?? false,
         });
         setMatrixFocus(root);
         setMatrixPath((prev) => {
@@ -870,12 +1149,14 @@ export default function FalconApp() {
           children: ["", "", ""],
           childSeats: [],
           grandchildren: [[], [], []],
+          matrixDirects: 0,
+          globalQualified: false,
         });
       } finally {
         if (seq === matrixLoadSeq.current) setMatrixLoading(false);
       }
     },
-    [account, fetchMatrixTreeData, matrixFocus, matrixPkg],
+    [account, fetchGlobalTreeData, fetchMatrixTreeData, matrixFocus, matrixPkg, matrixTreeMode],
   );
 
   const selectMatrixPackage = useCallback((pkgId: number) => {
@@ -910,8 +1191,11 @@ export default function FalconApp() {
           loadMatrix({ root: account, pkg: pkgForMatrix }),
         ]);
         if (seq !== refreshSeq.current) return;
+        // Directs scan is heavy on public RPC — run after downline so Team list fills first
+        prevDownlinePkg.current = pkgForMatrix;
+        await loadDownline(pkgForMatrix);
+        if (seq !== refreshSeq.current) return;
         void loadDirects();
-        void loadDownline();
       }
     } finally {
       if (seq === refreshSeq.current) setBusy(false);
@@ -977,6 +1261,8 @@ export default function FalconApp() {
         children: ["", "", ""],
         childSeats: [],
         grandchildren: [[], [], []],
+        matrixDirects: 0,
+        globalQualified: false,
       });
       if (matrixFocus.toLowerCase() !== account.toLowerCase()) {
         setMatrixFocus(account);
@@ -992,11 +1278,23 @@ export default function FalconApp() {
     void loadMatrix();
   }, [account, walletRestoring, matrixPkg, matrixFocus, loadMatrix]);
 
+  // Reload tree when switching Matrix ↔ Global Autopool
+  const prevTreeMode = useRef(matrixTreeMode);
+  useEffect(() => {
+    if (!account || walletRestoring) return;
+    if (prevTreeMode.current === matrixTreeMode) return;
+    prevTreeMode.current = matrixTreeMode;
+    setMatrixFocus(account);
+    setMatrixPath([account]);
+    prevMatrixQuery.current = { pkg: matrixPkg, focus: account };
+    void loadMatrix({ root: account, pkg: matrixPkg, mode: matrixTreeMode });
+  }, [account, walletRestoring, matrixTreeMode, matrixPkg, loadMatrix]);
+
   useEffect(() => {
     if (!account || walletRestoring) return;
     if (prevDownlinePkg.current === downlinePkg) return;
     prevDownlinePkg.current = downlinePkg;
-    void loadDownline();
+    void loadDownline(downlinePkg);
   }, [account, walletRestoring, downlinePkg, loadDownline]);
 
   function focusMatrixNode(addr: string) {
@@ -1258,17 +1556,13 @@ export default function FalconApp() {
   }
 
   async function onDistributeSf() {
-    const cycle = Number(sfDistributeCycle);
+    const cycle = Number(sfDistributeCycle || sf.cycle);
     const recipients = sfDistributeRecipients
       .split(/[\n,]+/)
       .map((s) => s.trim())
       .filter(Boolean);
-    const amounts = sfDistributeAmounts
-      .split(/[\n,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (!cycle || recipients.length === 0 || recipients.length !== amounts.length) {
-      showToast("Cycle + matching recipients/amounts required", "error");
+    if (!cycle || recipients.length === 0) {
+      showToast("Cycle + at least one recipient required", "error");
       return;
     }
     if (!recipients.every((a) => isAddress(a))) {
@@ -1277,8 +1571,50 @@ export default function FalconApp() {
     }
     await runTx("Distribute Secure Fund", async () => {
       const { contract } = await getSignerContract();
-      const parsed = amounts.map((a) => parseUnits(a, tokenDecimals));
-      const tx = await contract.distributeSecureFund(cycle, recipients, parsed);
+      const tx = await contract.distributeSecureFund(cycle, recipients);
+      await tx.wait();
+    });
+  }
+
+  async function onSetSfTargetPercent() {
+    const pct = Number(sfTargetInput);
+    if (!Number.isFinite(pct) || pct <= 0) {
+      showToast("Enter a valid target percent", "error");
+      return;
+    }
+    await runTx("Set Secure Fund %", async () => {
+      const { contract } = await getSignerContract();
+      const tx = await contract.setSecureFundTargetPercent(pct);
+      await tx.wait();
+    });
+  }
+
+  async function onClaimSecureFund() {
+    const cycle = sf.cycle;
+    if (!cycle) {
+      showToast("No secure fund cycle yet", "error");
+      return;
+    }
+    await runTx("Claim Secure Fund", async () => {
+      const { contract } = await getSignerContract();
+      const tx = await contract.claimSecureFund(cycle);
+      await tx.wait();
+    });
+  }
+
+  async function onRescueToken() {
+    if (!isAddress(rescueTokenAddr) || !isAddress(rescueTo)) {
+      showToast("Invalid token or recipient address", "error");
+      return;
+    }
+    if (!rescueAmount.trim()) {
+      showToast("Enter amount", "error");
+      return;
+    }
+    await runTx("Rescue Token", async () => {
+      const { contract } = await getSignerContract();
+      const amount = parseUnits(rescueAmount.trim(), tokenDecimals);
+      const tx = await contract.rescueToken(rescueTokenAddr, rescueTo, amount);
       await tx.wait();
     });
   }
@@ -1305,17 +1641,34 @@ export default function FalconApp() {
     downlinePage * PAGE_SIZE + PAGE_SIZE,
   );
 
-  const navItems = TABS;
+  const navItems = useMemo(
+    () => (isOwner ? [...TABS, ADMIN_TAB] : TABS),
+    [isOwner],
+  );
 
-  const shellTitle = TABS.find((t) => t.id === tab)?.label || "Dashboard";
+  const shellTitle =
+    navItems.find((t) => t.id === tab)?.label || TABS.find((t) => t.id === tab)?.label || "Dashboard";
 
   function handleNavigate(id: string) {
     if (id === "register") {
       setTab("dashboard");
       return;
     }
+    if (id === "admin" && !isOwner) {
+      showToast("Admin access is only for the contract owner wallet", "error");
+      setTab("dashboard");
+      return;
+    }
+    if (id === "team" && matrixPkg >= 1 && matrixPkg <= 5) {
+      setDownlinePkg(matrixPkg);
+    }
     setTab(id as TabId);
   }
+
+  // Kick non-owners out of admin if ownership changes
+  useEffect(() => {
+    if (tab === "admin" && !isOwner) setTab("dashboard");
+  }, [tab, isOwner]);
 
   const toastNode = toast ? (
     <div
@@ -1378,7 +1731,6 @@ export default function FalconApp() {
       primaryNavItems={PRIMARY_NAV}
       activeId={tab}
       onNavigate={handleNavigate}
-      contentClassName={tab === "matrix" ? "!max-w-7xl max-md:!max-w-none" : undefined}
       headerRight={
         <>
           <span className="badge badge-gold font-mono hidden sm:inline-flex">
@@ -1402,8 +1754,12 @@ export default function FalconApp() {
       {tab !== "matrix" && (
         <>
       <PageHeader
-        title={TABS.find((t) => t.id === tab)?.label || "Dashboard"}
-        description="Packages · Matrix · Team"
+        title={shellTitle}
+        description={
+          tab === "admin"
+            ? "Owner-only contract controls"
+            : "Packages · Matrix · Secure Fund · Team"
+        }
       />
 
       <div className="mb-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
@@ -1526,7 +1882,7 @@ export default function FalconApp() {
           <div className="grid-stats">
             {(
               [
-                ["Direct", incomePools.direct],
+                ["Referral", incomePools.direct],
                 ["Matrix", incomePools.matrix],
                 ["Global", incomePools.global],
                 ["CTO", incomePools.cto],
@@ -1551,7 +1907,7 @@ export default function FalconApp() {
           </div>
         </div>
 
-        {/* <div className="card">
+        <div className="card">
           <h2 className="card-title">Secure Fund Eligibility</h2>
           <p>
             <span className={`badge${secureEligible ? " badge-success" : ""}`}>
@@ -1561,7 +1917,7 @@ export default function FalconApp() {
           <p className="text-muted" style={{ fontSize: "0.85rem", margin: "0.5rem 0 0" }}>
             Eligible when total income is zero or less than invested.
           </p>
-        </div> */}
+        </div>
       </section>
       )}
 
@@ -1571,7 +1927,7 @@ export default function FalconApp() {
         <div className="grid-stats" style={{ marginBottom: "1rem" }}>
           {(
             [
-              ["Direct", incomePools.direct],
+              ["Referral", incomePools.direct],
               ["Matrix", incomePools.matrix],
               ["Global", incomePools.global],
               ["CTO", incomePools.cto],
@@ -1624,8 +1980,8 @@ export default function FalconApp() {
             </div>
           </div>
           {incomeLoading && <div className="loading-bar mb-3" />}
-          <div style={{ overflowX: "auto" }}>
-            <table className="data-table">
+          <div className="team-table-wrap income-table-wrap">
+            <table className="data-table team-data-table income-data-table">
               <thead>
                 <tr>
                   <th>Type</th>
@@ -1664,17 +2020,17 @@ export default function FalconApp() {
                         </span>
                       </td>
                       <td>{fmtUsd(r.amount, tokenDecimals)}</td>
-                      <td>{shortAddr(r.from)}</td>
+                      <td className="font-mono">{shortAddr(r.from)}</td>
                       <td>{pkgName(r.packageId)}</td>
                       <td>{String(r.meta)}</td>
-                      <td>{fmtTime(r.timestamp)}</td>
+                      <td className="income-col-time">{fmtTime(r.timestamp)}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-          <div className="mt-3 flex items-center gap-3">
+          <div className="team-pager">
             <button
               className="btn btn-ghost"
               type="button"
@@ -1730,15 +2086,27 @@ export default function FalconApp() {
                   downline: "0",
                 })),
             grandchildren: matrixInfo.grandchildren,
+            matrixDirects: matrixInfo.matrixDirects,
+            globalQualified: matrixInfo.globalQualified,
           } satisfies MatrixTreeData}
           onPackageChange={selectMatrixPackage}
           onFocus={focusMatrixNode}
           onGoHome={goMatrixHome}
           onGoUp={goMatrixUp}
           onPathJump={jumpMatrixPath}
-          onRefresh={() => void loadMatrix({ root: matrixFocus || account, pkg: matrixPkg })}
+          onRefresh={() =>
+            void loadMatrix({
+              root: matrixFocus || account,
+              pkg: matrixPkg,
+              mode: matrixTreeMode,
+            })
+          }
           onCopy={copyText}
-          loadSubtree={(addr) => fetchMatrixTreeData(addr, matrixPkg)}
+          loadSubtree={(addr) =>
+            matrixTreeMode === "global"
+              ? fetchGlobalTreeData(addr, matrixPkg)
+              : fetchMatrixTreeData(addr, matrixPkg)
+          }
           onUpgrade={() => {
             setTab("packages");
           }}
@@ -1750,8 +2118,8 @@ export default function FalconApp() {
             {currentPackage > 0 ? ` · Active: ${PACKAGE_NAMES[currentPackage]}` : ""}
           </h2>
           <p className="text-muted" style={{ fontSize: "0.82rem", margin: "0 0 0.85rem" }}>
-            Each owned package has its own 3× placement tree. Matrix income and Global Autopool both
-            pay from the same tree for that package.
+            Each owned package has its own 3× placement tree. Matrix shows all seats; Global
+            Autopool only includes members who completed 3 matrix directs.
           </p>
           {(userLoading || busy) && allMatrix.length === 0 ? (
             <DataLoading label="Loading package matrices…" />
@@ -1802,7 +2170,7 @@ export default function FalconApp() {
       <section>
         <div className="grid-stats" style={{ marginBottom: "1rem" }}>
           <div className="card">
-            <div className="stat-label !text-left">Direct Referrals</div>
+            <div className="stat-label !text-left">Referrals</div>
             <div className="stat-value !text-left text-gradient-gold">
               {userLoading || busy || directsLoading ? <span className="skeleton inline-block h-7 w-12" aria-hidden /> : directs.length}
             </div>
@@ -1813,7 +2181,11 @@ export default function FalconApp() {
               {downlineLoading || userLoading || busy ? (
                 <span className="skeleton inline-block h-7 w-12" aria-hidden />
               ) : (
-                String(allMatrix.find((m) => m.pkg === downlinePkg)?.downline ?? downlineMembers.length)
+                String(
+                  downlineMembers.length ||
+                    allMatrix.find((m) => m.pkg === downlinePkg)?.downline ||
+                    0,
+                )
               )}
             </div>
           </div>
@@ -1844,6 +2216,20 @@ export default function FalconApp() {
                   ? "Loading matrix downline…"
                   : `${downlineMembers.length} member${downlineMembers.length === 1 ? "" : "s"} in ${PACKAGE_NAMES[downlinePkg] || "package"} matrix`}
               </p>
+              {downlineError ? (
+                <p className="text-danger" style={{ fontSize: "0.82rem", margin: "0.35rem 0 0" }}>
+                  {downlineError}{" "}
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ padding: "0.15rem 0.5rem", fontSize: "0.78rem" }}
+                    onClick={() => void loadDownline(downlinePkg)}
+                    disabled={downlineLoading}
+                  >
+                    Retry
+                  </button>
+                </p>
+              ) : null}
             </div>
             <div className="team-pkg-filters">
               {[1, 2, 3, 4, 5].map((id) => (
@@ -1940,7 +2326,7 @@ export default function FalconApp() {
           )}
         </div>
         <div className="card">
-          <h2 className="card-title">Direct Team Members</h2>
+          <h2 className="card-title">Referral Team Members</h2>
           <p className="text-muted" style={{ fontSize: "0.82rem", margin: "0 0 0.5rem" }}>
             People who registered with your referral link ({directs.length})
           </p>
@@ -2040,10 +2426,10 @@ export default function FalconApp() {
                     : `$${PACKAGE_PRICES_USD[p.id]}`}
                 </div>
                 <div className="split">
-                  Direct {fmtUsd(p.directBonus, tokenDecimals)} · Secure {fmtUsd(p.secureFund, tokenDecimals)}
+                  Referral {fmtUsd(p.directBonus, tokenDecimals)} · Matrix {fmtUsd(p.matrixPool, tokenDecimals)} ·
+                  Global {fmtUsd(p.globalPool, tokenDecimals)}
                   <br />
-                  Matrix {fmtUsd(p.matrixPool, tokenDecimals)} · CTO {fmtUsd(p.ctoPool, tokenDecimals)} · Global{" "}
-                  {fmtUsd(p.globalPool, tokenDecimals)}
+                  CTO {fmtUsd(p.ctoPool, tokenDecimals)} · Secure {fmtUsd(p.secureFund, tokenDecimals)}
                 </div>
               </div>
             ))}
@@ -2057,11 +2443,11 @@ export default function FalconApp() {
                 <tr>
                   <th>Package</th>
                   <th>Price</th>
-                  <th>Direct</th>
-                  <th>Secure</th>
+                  <th>Referral</th>
                   <th>Matrix</th>
-                  <th>CTO</th>
                   <th>Global</th>
+                  <th>CTO</th>
+                  <th>Secure</th>
                 </tr>
               </thead>
               <tbody>
@@ -2070,10 +2456,10 @@ export default function FalconApp() {
                     <td>{PACKAGE_NAMES[p.id]}</td>
                     <td>{fmtUsd(p.price, tokenDecimals)}</td>
                     <td>{fmtUsd(p.directBonus, tokenDecimals)}</td>
-                    <td>{fmtUsd(p.secureFund, tokenDecimals)}</td>
                     <td>{fmtUsd(p.matrixPool, tokenDecimals)}</td>
-                    <td>{fmtUsd(p.ctoPool, tokenDecimals)}</td>
                     <td>{fmtUsd(p.globalPool, tokenDecimals)}</td>
+                    <td>{fmtUsd(p.ctoPool, tokenDecimals)}</td>
+                    <td>{fmtUsd(p.secureFund, tokenDecimals)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2111,7 +2497,7 @@ export default function FalconApp() {
       </section>
       )}
 
-      {/* Secure Fund — temporarily hidden
+      {/* Secure Fund */}
       {tab === "secure" && (
       <section>
         {(staticLoading || busy) && (
@@ -2129,8 +2515,16 @@ export default function FalconApp() {
                 <div className="stat-value !text-left">{fmtUsd(sf.balance, tokenDecimals)}</div>
               </div>
               <div>
-                <div className="stat-label !text-left">Last Cycle</div>
-                <div className="stat-value !text-left">{fmtTime(sf.cycle)}</div>
+                <div className="stat-label !text-left">Cycle</div>
+                <div className="stat-value !text-left">{sf.cycle || "—"}</div>
+              </div>
+              <div>
+                <div className="stat-label !text-left">Cycle Pool</div>
+                <div className="stat-value !text-left">{fmtUsd(sf.cyclePool, tokenDecimals)}</div>
+              </div>
+              <div>
+                <div className="stat-label !text-left">Target %</div>
+                <div className="stat-value !text-left">{sf.targetPercent}%</div>
               </div>
               <div>
                 <div className="stat-label !text-left">Next Available</div>
@@ -2153,11 +2547,40 @@ export default function FalconApp() {
               <span className={`badge${secureEligible ? " badge-success" : ""}`}>
                 {account ? (secureEligible ? "Eligible" : "Not eligible") : "—"}
               </span>
+              {sf.cycle > 0 && (
+                <span className={`badge${sfClaimed ? "" : " badge-success"}`} style={{ marginLeft: "0.4rem" }}>
+                  {sfClaimed ? "Claimed this cycle" : "Claim open"}
+                </span>
+              )}
             </p>
             <div className="stat-label !text-left">Your Secure Income</div>
             <div className="stat-value !text-left">{fmtUsd(incomePools.secure, tokenDecimals)}</div>
+            <div className="grid-two" style={{ marginTop: "0.85rem" }}>
+              <div>
+                <div className="stat-label !text-left">Payout Due</div>
+                <div className="stat-value !text-left" style={{ fontSize: "1.15rem" }}>
+                  {fmtUsd(sfPayoutDue, tokenDecimals)}
+                </div>
+              </div>
+              <div>
+                <div className="stat-label !text-left">Target Amount</div>
+                <div className="stat-value !text-left" style={{ fontSize: "1.15rem" }}>
+                  {fmtUsd(sfTargetAmount, tokenDecimals)}
+                </div>
+              </div>
+            </div>
+            <button
+              className="btn btn-primary"
+              type="button"
+              style={{ marginTop: "1rem" }}
+              disabled={!account || busy || !secureEligible || !sf.cycle || sfClaimed || sfPayoutDue === 0n}
+              onClick={() => void onClaimSecureFund()}
+            >
+              Claim Secure Fund (Cycle {sf.cycle || "—"})
+            </button>
             <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: "1rem" }}>
-              Silver+ packages contribute to Secure Fund. Eligible users are paid yearly when income &lt; invested.
+              Silver+ packages contribute to Secure Fund. Eligible under-earners can claim after the
+              owner finalizes a cycle.
             </p>
               </>
             )}
@@ -2167,41 +2590,64 @@ export default function FalconApp() {
           <h2 className="card-title">How Secure Fund Works</h2>
           <ol className="text-muted" style={{ fontSize: "0.9rem", lineHeight: 1.7, margin: 0, paddingLeft: "1.2rem" }}>
             <li>Starter has no Secure Fund cut — starts from Silver.</li>
-            <li>Pool accumulates in the contract.</li>
-            <li>After 1 year the owner finalizes a cycle.</li>
-            <li>Eligible users are paid in batches — shown in income history.</li>
+            <li>Pool accumulates in the contract (target {sf.targetPercent}% of invested).</li>
+            <li>Owner finalizes a cycle when the period is ready.</li>
+            <li>Eligible users claim their payout — shown in income history.</li>
           </ol>
         </div>
       </section>
       )}
-      */}
 
-      {/* On-chain Admin */}
-      {tab === "admin" && (
-      <section>
-        {isOwner ? (
+      {/* On-chain Admin — owner wallet only */}
+      {tab === "admin" && isOwner && (
+      <section className="admin-panel">
+        <div className="grid-stats" style={{ marginBottom: "1rem" }}>
           <div className="card">
-            <h2 className="card-title">Owner Admin</h2>
-            <p>
-              Status:{" "}
-              <span className={`badge${paused ? " badge-danger" : " badge-success"}`}>{paused ? "Paused" : "Live"}</span> · Treasury:{" "}
-              <code>{shortAddr(treasury, 6)}</code>
+            <div className="stat-label !text-left">Contract</div>
+            <div className="stat-value !text-left" style={{ fontSize: "1rem" }}>
+              <a href={explorerAddress(contractAddr, EXPLORER_BASE)} target="_blank" rel="noopener noreferrer">
+                {shortAddr(contractAddr, 6)}
+              </a>
+            </div>
+          </div>
+          <div className="card">
+            <div className="stat-label !text-left">Status</div>
+            <div className="stat-value !text-left">
+              <span className={`badge${paused ? " badge-danger" : " badge-success"}`}>
+                {paused ? "Paused" : "Live"}
+              </span>
+            </div>
+          </div>
+          <div className="card">
+            <div className="stat-label !text-left">Users</div>
+            <div className="stat-value !text-left text-gradient-gold">{totalUsers}</div>
+          </div>
+          <div className="card">
+            <div className="stat-label !text-left">SF Pool</div>
+            <div className="stat-value !text-left text-gradient-gold">
+              {fmtUsd(sf.balance, tokenDecimals)}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid-two" style={{ marginBottom: "1rem" }}>
+          <div className="card">
+            <h2 className="card-title">Contract Controls</h2>
+            <p className="text-muted" style={{ fontSize: "0.82rem", margin: "0 0 0.85rem" }}>
+              Treasury: <code>{treasury ? shortAddr(treasury, 6) : "—"}</code>
             </p>
-            <div className="mt-4 flex flex-wrap gap-2" style={{ marginTop: "1rem" }}>
+            <div className="flex flex-wrap gap-2">
               {paused ? (
-                <button className="btn btn-ghost" type="button" disabled={busy} onClick={() => void onPause(false)}>
-                  Unpause
+                <button className="btn btn-primary" type="button" disabled={busy} onClick={() => void onPause(false)}>
+                  Unpause Contract
                 </button>
               ) : (
                 <button className="btn btn-danger" type="button" disabled={busy} onClick={() => void onPause(true)}>
                   Pause Contract
                 </button>
               )}
-              <button className="btn btn-primary" type="button" disabled={busy} onClick={() => void onFinalizeSf()}>
-                Finalize Secure Fund Cycle
-              </button>
             </div>
-            <div className="field" style={{ marginTop: "1rem", maxWidth: 400 }}>
+            <div className="field" style={{ marginTop: "1rem" }}>
               <label className="label">New Treasury Address</label>
               <input
                 className="input"
@@ -2220,61 +2666,136 @@ export default function FalconApp() {
             >
               Set Treasury
             </button>
+          </div>
 
-            <h2 className="card-title" style={{ marginTop: "1.5rem" }}>Distribute Secure Fund</h2>
-            <p className="text-muted" style={{ fontSize: "0.82rem" }}>
-              Current cycle: {sf.cycle}. Recipients & amounts must match length (comma or newline separated).
+          <div className="card">
+            <h2 className="card-title">Secure Fund Settings</h2>
+            <p className="text-muted" style={{ fontSize: "0.82rem", margin: "0 0 0.85rem" }}>
+              Cycle {sf.cycle || "—"} · Pool {fmtUsd(sf.cyclePool, tokenDecimals)} · Next{" "}
+              {fmtTime(sf.next)}
             </p>
-            <div className="field" style={{ marginTop: "0.75rem", maxWidth: 400 }}>
-              <label className="label">Cycle</label>
+            <div className="field" style={{ maxWidth: 220 }}>
+              <label className="label">Target Percent</label>
               <input
                 className="input"
-                value={sfDistributeCycle || String(sf.cycle)}
-                onChange={(e) => setSfDistributeCycle(e.target.value.trim())}
+                value={sfTargetInput}
+                onChange={(e) => setSfTargetInput(e.target.value.trim())}
+                inputMode="numeric"
               />
             </div>
-            <div className="field" style={{ marginTop: "0.75rem" }}>
-              <label className="label">Recipients (addresses)</label>
-              <textarea
-                className="input"
-                rows={3}
-                value={sfDistributeRecipients}
-                onChange={(e) => setSfDistributeRecipients(e.target.value)}
-                placeholder="0xabc…, 0xdef…"
-                style={{ resize: "vertical", fontFamily: "var(--font-mono)" }}
-              />
+            <div className="flex flex-wrap gap-2" style={{ marginTop: "0.65rem" }}>
+              <button
+                className="btn btn-ghost"
+                type="button"
+                disabled={busy}
+                onClick={() => void onSetSfTargetPercent()}
+              >
+                Update Target %
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={busy}
+                onClick={() => void onFinalizeSf()}
+              >
+                Finalize Cycle
+              </button>
             </div>
-            <div className="field" style={{ marginTop: "0.75rem" }}>
-              <label className="label">Amounts (token units or wei)</label>
-              <textarea
-                className="input"
-                rows={3}
-                value={sfDistributeAmounts}
-                onChange={(e) => setSfDistributeAmounts(e.target.value)}
-                placeholder="10.5, 20"
-                style={{ resize: "vertical", fontFamily: "var(--font-mono)" }}
-              />
-            </div>
-            <button
-              className="btn btn-primary"
-              type="button"
-              style={{ marginTop: "0.75rem" }}
-              disabled={busy}
-              onClick={() => void onDistributeSf()}
-            >
-              Distribute Secure Fund
-            </button>
           </div>
-        ) : (
+        </div>
+
+        <div className="card" style={{ marginBottom: "1rem" }}>
+          <h2 className="card-title">Distribute Secure Fund</h2>
+          <p className="text-muted" style={{ fontSize: "0.82rem" }}>
+            New ABI: pass cycle + recipient addresses only. Payout amounts are computed on-chain.
+          </p>
+          <div className="field" style={{ marginTop: "0.75rem", maxWidth: 280 }}>
+            <label className="label">Cycle</label>
+            <input
+              className="input"
+              value={sfDistributeCycle || String(sf.cycle || "")}
+              onChange={(e) => setSfDistributeCycle(e.target.value.trim())}
+            />
+          </div>
+          <div className="field" style={{ marginTop: "0.75rem" }}>
+            <label className="label">Recipients (comma or newline)</label>
+            <textarea
+              className="input"
+              rows={4}
+              value={sfDistributeRecipients}
+              onChange={(e) => setSfDistributeRecipients(e.target.value)}
+              placeholder="0xabc…&#10;0xdef…"
+              style={{ resize: "vertical", fontFamily: "var(--font-mono)" }}
+            />
+          </div>
+          <button
+            className="btn btn-primary"
+            type="button"
+            style={{ marginTop: "0.75rem" }}
+            disabled={busy}
+            onClick={() => void onDistributeSf()}
+          >
+            Distribute Secure Fund
+          </button>
+        </div>
+
+        <div className="card">
+          <h2 className="card-title">Rescue Token</h2>
+          <p className="text-muted" style={{ fontSize: "0.82rem" }}>
+            Withdraw stuck ERC-20 tokens from the contract (owner only).
+          </p>
+          <div className="grid-two" style={{ marginTop: "0.75rem" }}>
+            <div className="field">
+              <label className="label">Token</label>
+              <input
+                className="input"
+                value={rescueTokenAddr}
+                onChange={(e) => setRescueTokenAddr(e.target.value.trim())}
+                placeholder="0x token…"
+                spellCheck={false}
+              />
+            </div>
+            <div className="field">
+              <label className="label">To</label>
+              <input
+                className="input"
+                value={rescueTo}
+                onChange={(e) => setRescueTo(e.target.value.trim())}
+                placeholder="0x recipient…"
+                spellCheck={false}
+              />
+            </div>
+          </div>
+          <div className="field" style={{ marginTop: "0.75rem", maxWidth: 280 }}>
+            <label className="label">Amount ({tokenSymbol})</label>
+            <input
+              className="input"
+              value={rescueAmount}
+              onChange={(e) => setRescueAmount(e.target.value.trim())}
+              placeholder="0.0"
+            />
+          </div>
+          <button
+            className="btn btn-ghost"
+            type="button"
+            style={{ marginTop: "0.75rem" }}
+            disabled={busy}
+            onClick={() => void onRescueToken()}
+          >
+            Rescue Token
+          </button>
+        </div>
+      </section>
+      )}
+      {tab === "admin" && !isOwner && (
+        <section>
           <div className="card">
-            <p className="text-muted">On-chain admin tools appear only for the contract owner wallet.</p>
-            <p className="text-muted" style={{ fontSize: "0.85rem" }}>
-              For the web Admin User Panel (login + user management), open{" "}
-              <Link href="/admin/login">/admin/login</Link>.
+            <h2 className="card-title">Access Denied</h2>
+            <p className="text-muted">
+              Admin Panel is only available when the connected wallet is the contract owner.
             </p>
           </div>
-        )}
-      </section>
+        </section>
       )}
       </div>
 

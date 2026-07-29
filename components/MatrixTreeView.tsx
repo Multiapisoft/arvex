@@ -41,6 +41,10 @@ export type MatrixTreeData = {
   ctoRank: number;
   children: MatrixSeatInfo[];
   grandchildren: MatrixSeatInfo[][];
+  /** Matrix direct slots filled (0–3) — used for Global Autopool entry progress. */
+  matrixDirects?: number;
+  /** True when this root has completed 3 matrix directs (Global Autopool qualified). */
+  globalQualified?: boolean;
 };
 
 export type MatrixTreeMode = "matrix" | "global";
@@ -158,6 +162,7 @@ function TreeBoard({
   onOpen,
   onCopy,
   compact,
+  globalMode,
 }: {
   account: string;
   packageId: number;
@@ -165,6 +170,7 @@ function TreeBoard({
   onOpen: (addr: string) => void;
   onCopy: (text: string) => void;
   compact?: boolean;
+  globalMode?: boolean;
 }) {
   const children = data.children.length ? data.children : emptySeats(3);
   const grandchildren = [0, 1, 2].map((g) =>
@@ -172,11 +178,15 @@ function TreeBoard({
   );
   const isMeRoot = data.root.toLowerCase() === account.toLowerCase();
   const rootLabel = isMeRoot ? "You" : shortAddr(data.root);
+  const seatTag = (seat: MatrixSeatInfo, fallback: string) => {
+    if (!isFilled(seat.address)) return "Open";
+    if (globalMode) return `${pkgName(packageId)} · Global`;
+    return `${pkgName(packageId)} · ${seat.active ? "Active" : "Inactive"}`;
+  };
 
   return (
     <div className={cn("mx-tree-board", compact && "is-compact")}>
       <div className="mx-level-block">
-        <span className="mx-lvl-badge">Level 1</span>
         <div className="mx-level-nodes mx-level-nodes-1">
           <MemberNode
             seat={{
@@ -186,7 +196,11 @@ function TreeBoard({
               downline: data.downline,
             }}
             label={rootLabel}
-            levelLabel={`${pkgName(packageId)} · Root`}
+            levelLabel={
+              globalMode
+                ? `${pkgName(packageId)} · ${data.globalQualified ? "Qualified" : "Pending"}`
+                : `${pkgName(packageId)} · Root`
+            }
             isYou={isMeRoot}
             size="lg"
             onOpen={onOpen}
@@ -204,18 +218,13 @@ function TreeBoard({
       </div>
 
       <div className="mx-level-block">
-        <span className="mx-lvl-badge">Level 2</span>
         <div className="mx-level-nodes mx-level-nodes-3">
           {children.map((child, idx) => (
             <div key={idx} className="mx-slot">
               <MemberNode
                 seat={child}
                 label={isFilled(child.address) ? shortAddr(child.address) : "Empty"}
-                levelLabel={
-                  isFilled(child.address)
-                    ? `${pkgName(packageId)} · ${child.active ? "Active" : "Inactive"}`
-                    : "Open"
-                }
+                levelLabel={seatTag(child, "Open")}
                 isYou={
                   isFilled(child.address) && child.address.toLowerCase() === account.toLowerCase()
                 }
@@ -240,7 +249,6 @@ function TreeBoard({
       </div>
 
       <div className="mx-level-block">
-        <span className="mx-lvl-badge">Level 3</span>
         <div className="mx-level-nodes mx-level-nodes-3">
           {grandchildren.map((group, g) => (
             <div key={g} className="mx-slot mx-slot-group">
@@ -249,11 +257,7 @@ function TreeBoard({
                   key={idx}
                   seat={gc}
                   label={isFilled(gc.address) ? shortAddr(gc.address) : "Empty"}
-                  levelLabel={
-                    isFilled(gc.address)
-                      ? `${pkgName(packageId)} · ${gc.active ? "Active" : "Inactive"}`
-                      : "Open"
-                  }
+                  levelLabel={seatTag(gc, "Open")}
                   size="sm"
                   isYou={
                     isFilled(gc.address) && gc.address.toLowerCase() === account.toLowerCase()
@@ -505,7 +509,13 @@ export function MatrixTreeView({
             <span>Status</span>
             <strong className={data.active ? "text-leaf-400" : "text-danger"}>
               <i className={cn("status-dot", data.active ? "active" : "inactive")} />
-              {data.active ? "Active" : "Inactive"}
+              {isGlobal
+                ? data.globalQualified
+                  ? "Global Qualified"
+                  : "Not in Global yet"
+                : data.active
+                  ? "Active"
+                  : "Inactive"}
             </strong>
           </li>
         </ul>
@@ -525,12 +535,25 @@ export function MatrixTreeView({
               {activePackageId === packageId ? " · Active" : ""}
             </strong>
           </li>
+          {isGlobal ? (
+            <li>
+              <span>Entry (3 directs)</span>
+              <strong
+                className={
+                  data.globalQualified ? "text-leaf-400" : "text-solar-400"
+                }
+              >
+                {Math.min(3, data.matrixDirects ?? data.childrenCount)}/3
+                {data.globalQualified ? " · Qualified" : " · Pending"}
+              </strong>
+            </li>
+          ) : null}
           <li>
-            <span>Children</span>
+            <span>{isGlobal ? "Global children" : "Children"}</span>
             <strong>{data.childrenCount}/3</strong>
           </li>
           <li>
-            <span>Downline</span>
+            <span>{isGlobal ? "Global downline" : "Downline"}</span>
             <strong>{data.downline}</strong>
           </li>
           <li>
@@ -719,13 +742,13 @@ export function MatrixTreeView({
 
       <div className="mx-kpi-row">
         <StatCard
-          label={`Total Members · ${pkgLabel}`}
+          label={isGlobal ? `Global Downline · ${pkgLabel}` : `Total Members · ${pkgLabel}`}
           value={counts.total}
           tone="gold"
           icon={<Users className="h-5 w-5" />}
         />
         <StatCard
-          label={`Active Members · ${pkgLabel}`}
+          label={isGlobal ? `Qualified · ${pkgLabel}` : `Active Members · ${pkgLabel}`}
           value={counts.active}
           tone="green"
           icon={<GitBranch className="h-5 w-5" />}
@@ -759,9 +782,16 @@ export function MatrixTreeView({
             </div>
           </div>
 
-          {!data.active && activePackageId > 0 && packageId === activePackageId && (
+          {!data.active && activePackageId > 0 && packageId === activePackageId && !isGlobal && (
             <div className="mx-tree-empty-hint">
               Your {pkgName(packageId)} matrix seat is not active yet. Buy or refresh after purchase.
+            </div>
+          )}
+          {isGlobal && activePackageId > 0 && data.globalQualified === false && (
+            <div className="mx-tree-empty-hint">
+              Complete <strong>3 matrix directs</strong> on {pkgName(packageId)} to enter Global
+              Autopool ({Math.min(3, data.matrixDirects ?? data.childrenCount)}/3). Qualified members
+              from your matrix appear here as they fill their 3 directs.
             </div>
           )}
           {activePackageId === 0 && (
@@ -781,6 +811,7 @@ export function MatrixTreeView({
               account={account}
               packageId={packageId}
               data={data}
+              globalMode={isGlobal}
               onOpen={(addr) => void openSubtree(addr)}
               onCopy={onCopy}
             />
@@ -789,7 +820,7 @@ export function MatrixTreeView({
           <div className="mx-tree-foot">
             <p>
               {isGlobal
-                ? "Same package placement tree as Matrix — Global pool pays per upline level on fills."
+                ? "Only members who completed 3 matrix directs are placed in Global Autopool — tree & downline show those users."
                 : "Click any filled node to open its downline · Home / Up / breadcrumb navigate main view"}
             </p>
             {onUpgrade && (
@@ -912,6 +943,7 @@ export function MatrixTreeView({
                       account={account}
                       packageId={packageId}
                       data={modalData}
+                      globalMode={isGlobal}
                       compact
                       onOpen={(addr) => void openSubtree(addr)}
                       onCopy={onCopy}

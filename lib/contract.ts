@@ -9,7 +9,7 @@ export const EXPLORER_BASE = "https://testnet.bscscan.com";
 /** Override via NEXT_PUBLIC_CONTRACT_ADDRESS or Advanced UI. */
 export const DEFAULT_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
-  "0xBc9E7f1413989eA5dCA5Ac27DD499bAB742696fE";
+  "0xc5b92cF8Cd14e8160bA97CAc1BB5e16826b17378";
 
 /** Default USDC (payment token) on BSC Testnet. */
 export const DEFAULT_PAYMENT_TOKEN =
@@ -47,698 +47,1714 @@ export const ERC20_ABI = [
 /** Official FalconCapital ABI (JSON). */
 export const FALCON_ABI = [
   {
-    inputs: [
-      { internalType: "address", name: "paymentToken_", type: "address" },
-      { internalType: "address", name: "treasury_", type: "address" },
-      { internalType: "address", name: "rootUser_", type: "address" },
-    ],
-    stateMutability: "nonpayable",
-    type: "constructor",
-  },
-  { inputs: [], name: "AlreadyOwnsPackage", type: "error" },
-  { inputs: [], name: "AlreadyRegistered", type: "error" },
-  { inputs: [], name: "ArrayLengthMismatch", type: "error" },
-  { inputs: [], name: "BatchTooLarge", type: "error" },
-  { inputs: [], name: "EnforcedPause", type: "error" },
-  { inputs: [], name: "ExpectedPause", type: "error" },
-  { inputs: [], name: "InvalidAddress", type: "error" },
-  { inputs: [], name: "InvalidDistribution", type: "error" },
-  { inputs: [], name: "InvalidPackage", type: "error" },
-  { inputs: [], name: "InvalidSponsor", type: "error" },
-  { inputs: [], name: "InvalidTokenDecimals", type: "error" },
-  { inputs: [], name: "MatrixQueueOverflow", type: "error" },
-  { inputs: [], name: "MustStartWithStarter", type: "error" },
-  { inputs: [], name: "MustUpgradeSequentially", type: "error" },
-  { inputs: [], name: "NotRegistered", type: "error" },
-  { inputs: [], name: "NothingToWithdraw", type: "error" },
-  {
-    inputs: [{ internalType: "address", name: "owner", type: "address" }],
-    name: "OwnableInvalidOwner",
-    type: "error",
-  },
-  {
-    inputs: [{ internalType: "address", name: "account", type: "address" }],
-    name: "OwnableUnauthorizedAccount",
-    type: "error",
-  },
-  { inputs: [], name: "ReentrancyGuardReentrantCall", type: "error" },
-  {
-    inputs: [{ internalType: "address", name: "token", type: "address" }],
-    name: "SafeERC20FailedOperation",
-    type: "error",
-  },
-  { inputs: [], name: "SecureFundNotReady", type: "error" },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "to", type: "address" },
-      { indexed: true, internalType: "uint8", name: "packageId", type: "uint8" },
-      { indexed: true, internalType: "uint8", name: "rank", type: "uint8" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
-    ],
-    name: "CtoPaid",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "sponsor", type: "address" },
-      { indexed: true, internalType: "address", name: "from", type: "address" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
-    ],
-    name: "DirectBonusPaid",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "to", type: "address" },
-      { indexed: true, internalType: "address", name: "from", type: "address" },
-      { indexed: false, internalType: "uint8", name: "packageId", type: "uint8" },
-      { indexed: false, internalType: "uint8", name: "level", type: "uint8" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
-    ],
-    name: "GlobalPoolPaid",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "to", type: "address" },
-      { indexed: true, internalType: "address", name: "from", type: "address" },
-      { indexed: false, internalType: "uint8", name: "packageId", type: "uint8" },
-      { indexed: false, internalType: "uint8", name: "level", type: "uint8" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
-    ],
-    name: "MatrixIncomePaid",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "user", type: "address" },
-      { indexed: true, internalType: "uint8", name: "packageId", type: "uint8" },
-      { indexed: true, internalType: "address", name: "parent", type: "address" },
-    ],
-    name: "MatrixPlaced",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "previousOwner", type: "address" },
-      { indexed: true, internalType: "address", name: "newOwner", type: "address" },
-    ],
-    name: "OwnershipTransferStarted",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "previousOwner", type: "address" },
-      { indexed: true, internalType: "address", name: "newOwner", type: "address" },
-    ],
-    name: "OwnershipTransferred",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "user", type: "address" },
-      { indexed: true, internalType: "uint8", name: "packageId", type: "uint8" },
-      { indexed: false, internalType: "uint256", name: "price", type: "uint256" },
-    ],
-    name: "PackagePurchased",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [{ indexed: false, internalType: "address", name: "account", type: "address" }],
-    name: "Paused",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "user", type: "address" },
-      { indexed: true, internalType: "uint8", name: "packageId", type: "uint8" },
-      { indexed: false, internalType: "uint8", name: "rank", type: "uint8" },
-      { indexed: false, internalType: "uint256", name: "downlineCount", type: "uint256" },
-    ],
-    name: "RankAchieved",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "user", type: "address" },
-      { indexed: true, internalType: "address", name: "sponsor", type: "address" },
-    ],
-    name: "Registered",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "uint256", name: "cycle", type: "uint256" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
-      { indexed: false, internalType: "uint256", name: "availableAt", type: "uint256" },
-    ],
-    name: "SecureFundCycleFinalized",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "from", type: "address" },
-      { indexed: false, internalType: "uint8", name: "packageId", type: "uint8" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
-    ],
-    name: "SecureFundDeposited",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "uint256", name: "cycle", type: "uint256" },
-      { indexed: true, internalType: "address", name: "to", type: "address" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
-    ],
-    name: "SecureFundDistributed",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [{ indexed: true, internalType: "address", name: "treasury", type: "address" }],
-    name: "TreasuryUpdated",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [{ indexed: false, internalType: "address", name: "account", type: "address" }],
-    name: "Unpaused",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "address", name: "user", type: "address" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
-    ],
-    name: "Withdrawn",
-    type: "event",
-  },
-  {
-    inputs: [],
-    name: "CTO_RANKS",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "INCOME_CTO",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "INCOME_DIRECT",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "INCOME_GLOBAL",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "INCOME_MATRIX",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "INCOME_SECURE_FUND",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "MATRIX_DEPTH",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "MATRIX_WIDTH",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "MAX_INCOME_HISTORY_PAGE",
-    outputs: [{ internalType: "uint16", name: "", type: "uint16" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "MAX_SECURE_FUND_BATCH",
-    outputs: [{ internalType: "uint16", name: "", type: "uint16" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "PACKAGE_CROWN",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "PACKAGE_DIAMOND",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "PACKAGE_GOLD",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "PACKAGE_NONE",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "PACKAGE_SILVER",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "PACKAGE_STARTER",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "YEAR",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "acceptOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "uint8", name: "packageId", type: "uint8" }],
-    name: "buyPackage",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    name: "ctoThresholds",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "deployedAt",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "uint256", name: "cycle", type: "uint256" },
-      { internalType: "address[]", name: "recipients", type: "address[]" },
-      { internalType: "uint256[]", name: "amounts", type: "uint256[]" },
-    ],
-    name: "distributeSecureFund",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "finalizeSecureFundCycle",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "address", name: "user", type: "address" },
-      { internalType: "uint256", name: "offset", type: "uint256" },
-      { internalType: "uint256", name: "limit", type: "uint256" },
-    ],
-    name: "getIncomeHistory",
-    outputs: [
+    "inputs": [
       {
-        components: [
-          { internalType: "uint8", name: "incomeType", type: "uint8" },
-          { internalType: "uint256", name: "amount", type: "uint256" },
-          { internalType: "address", name: "from", type: "address" },
-          { internalType: "uint8", name: "packageId", type: "uint8" },
-          { internalType: "uint32", name: "meta", type: "uint32" },
-          { internalType: "uint40", name: "timestamp", type: "uint40" },
-        ],
-        internalType: "struct FalconCapital.IncomeRecord[]",
-        name: "records",
-        type: "tuple[]",
+        "internalType": "address",
+        "name": "paymentToken_",
+        "type": "address"
       },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "user", type: "address" }],
-    name: "getIncomeTotals",
-    outputs: [
       {
-        components: [
-          { internalType: "uint256", name: "direct", type: "uint256" },
-          { internalType: "uint256", name: "matrix", type: "uint256" },
-          { internalType: "uint256", name: "global", type: "uint256" },
-          { internalType: "uint256", name: "cto", type: "uint256" },
-          { internalType: "uint256", name: "secureFund", type: "uint256" },
-        ],
-        internalType: "struct FalconCapital.IncomeTotals",
-        name: "",
-        type: "tuple",
+        "internalType": "address",
+        "name": "treasury_",
+        "type": "address"
       },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "address", name: "user", type: "address" },
-      { internalType: "uint8", name: "packageId", type: "uint8" },
-    ],
-    name: "getMatrixChildren",
-    outputs: [{ internalType: "address[3]", name: "", type: "address[3]" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "uint8", name: "packageId", type: "uint8" }],
-    name: "getPackage",
-    outputs: [
       {
-        components: [
-          { internalType: "uint256", name: "price", type: "uint256" },
-          { internalType: "uint256", name: "directBonus", type: "uint256" },
-          { internalType: "uint256", name: "secureFund", type: "uint256" },
-          { internalType: "uint256", name: "matrixPool", type: "uint256" },
-          { internalType: "uint256", name: "ctoPool", type: "uint256" },
-          { internalType: "uint256", name: "globalPool", type: "uint256" },
-          { internalType: "uint256", name: "matrixPerLevel", type: "uint256" },
-          { internalType: "uint256", name: "globalPerLevel", type: "uint256" },
-          { internalType: "uint256[5]", name: "ctoPerRank", type: "uint256[5]" },
-        ],
-        internalType: "struct FalconCapital.PackageConfig",
-        name: "",
-        type: "tuple",
+        "internalType": "address",
+        "name": "rootUser_",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "AlreadyOwnsPackage",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "AlreadyRegistered",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ArrayLengthMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BatchTooLarge",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "EnforcedPause",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ExpectedPause",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidAddress",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidDistribution",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidPackage",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidSecureFundPercent",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidSponsor",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidTokenDecimals",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MatrixQueueOverflow",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MustStartWithStarter",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MustUpgradeSequentially",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotRegistered",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NothingToWithdraw",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "SafeERC20FailedOperation",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "SecureFundNotReady",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
       },
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "rank",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
     ],
-    stateMutability: "view",
-    type: "function",
+    "name": "CtoPaid",
+    "type": "event"
   },
   {
-    inputs: [{ internalType: "address", name: "user", type: "address" }],
-    name: "incomeHistoryLength",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "", type: "address" }],
-    name: "incomeTotals",
-    outputs: [
-      { internalType: "uint256", name: "direct", type: "uint256" },
-      { internalType: "uint256", name: "matrix", type: "uint256" },
-      { internalType: "uint256", name: "global", type: "uint256" },
-      { internalType: "uint256", name: "cto", type: "uint256" },
-      { internalType: "uint256", name: "secureFund", type: "uint256" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sponsor",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
     ],
-    stateMutability: "view",
-    type: "function",
+    "name": "DirectBonusPaid",
+    "type": "event"
   },
   {
-    inputs: [
-      { internalType: "address", name: "user", type: "address" },
-      { internalType: "uint8", name: "packageId", type: "uint8" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
     ],
-    name: "isGlobalPoolQualified",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
+    "name": "GlobalPoolPaid",
+    "type": "event"
   },
   {
-    inputs: [{ internalType: "address", name: "user", type: "address" }],
-    name: "isSecureFundEligible",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "user", type: "address" }],
-    name: "isUnderEarner",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "address", name: "", type: "address" },
-      { internalType: "uint8", name: "", type: "uint8" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
     ],
-    name: "matrices",
-    outputs: [
-      { internalType: "bool", name: "active", type: "bool" },
-      { internalType: "address", name: "parent", type: "address" },
-      { internalType: "uint8", name: "childCount", type: "uint8" },
-      { internalType: "uint256", name: "downlineCount", type: "uint256" },
-      { internalType: "uint8", name: "rank", type: "uint8" },
+    "name": "MatrixIncomePaid",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "parent",
+        "type": "address"
+      }
     ],
-    stateMutability: "view",
-    type: "function",
+    "name": "MatrixPlaced",
+    "type": "event"
   },
   {
-    inputs: [],
-    name: "nextSecureFundAvailableAt",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "owner",
-    outputs: [{ internalType: "address", name: "", type: "address" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "pause",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "paused",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "paymentDecimals",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "paymentToken",
-    outputs: [{ internalType: "contract IERC20", name: "", type: "address" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "pendingOwner",
-    outputs: [{ internalType: "address", name: "", type: "address" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "uint8", name: "packageId", type: "uint8" },
-      { internalType: "uint8", name: "rank", type: "uint8" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
     ],
-    name: "rankHolderCount",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
+    "name": "OwnershipTransferStarted",
+    "type": "event"
   },
   {
-    inputs: [
-      { internalType: "address", name: "sponsor", type: "address" },
-      { internalType: "uint8", name: "packageId", type: "uint8" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
     ],
-    name: "registerAndBuy",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
+    "name": "OwnershipTransferred",
+    "type": "event"
   },
   {
-    inputs: [{ internalType: "address", name: "sponsor", type: "address" }],
-    name: "registerWithSponsor",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "renounceOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "address", name: "token", type: "address" },
-      { internalType: "address", name: "to", type: "address" },
-      { internalType: "uint256", name: "amount", type: "uint256" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "price",
+        "type": "uint256"
+      }
     ],
-    name: "rescueToken",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
+    "name": "PackagePurchased",
+    "type": "event"
   },
   {
-    inputs: [],
-    name: "secureFundBalance",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "uint256", name: "", type: "uint256" },
-      { internalType: "address", name: "", type: "address" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
     ],
-    name: "secureFundClaimed",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
+    "name": "Paused",
+    "type": "event"
   },
   {
-    inputs: [],
-    name: "secureFundCycle",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    name: "secureFundCyclePool",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "newTreasury", type: "address" }],
-    name: "setTreasury",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "newOwner", type: "address" }],
-    name: "transferOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "treasury",
-    outputs: [{ internalType: "address", name: "", type: "address" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "unpause",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "userCount",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    name: "userList",
-    outputs: [{ internalType: "address", name: "", type: "address" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "", type: "address" }],
-    name: "users",
-    outputs: [
-      { internalType: "bool", name: "registered", type: "bool" },
-      { internalType: "address", name: "sponsor", type: "address" },
-      { internalType: "uint8", name: "currentPackage", type: "uint8" },
-      { internalType: "uint256", name: "totalInvested", type: "uint256" },
-      { internalType: "uint256", name: "totalEarned", type: "uint256" },
-      { internalType: "uint256", name: "withdrawable", type: "uint256" },
-      { internalType: "uint256", name: "registeredAt", type: "uint256" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "rank",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "downlineCount",
+        "type": "uint256"
+      }
     ],
-    stateMutability: "view",
-    type: "function",
+    "name": "RankAchieved",
+    "type": "event"
   },
   {
-    inputs: [],
-    name: "withdraw",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sponsor",
+        "type": "address"
+      }
+    ],
+    "name": "Registered",
+    "type": "event"
   },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "cycle",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "availableAt",
+        "type": "uint256"
+      }
+    ],
+    "name": "SecureFundCycleFinalized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "SecureFundDeposited",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "cycle",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "SecureFundDistributed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "percent",
+        "type": "uint16"
+      }
+    ],
+    "name": "SecureFundTargetPercentUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "treasury",
+        "type": "address"
+      }
+    ],
+    "name": "TreasuryUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Unpaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "Withdrawn",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "CTO_RANKS",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "INCOME_CTO",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "INCOME_DIRECT",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "INCOME_GLOBAL",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "INCOME_MATRIX",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "INCOME_SECURE_FUND",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MATRIX_DEPTH",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MATRIX_WIDTH",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_INCOME_HISTORY_PAGE",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_SECURE_FUND_BATCH",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_SECURE_FUND_TARGET_PERCENT",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MIN_SECURE_FUND_TARGET_PERCENT",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "PACKAGE_CROWN",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "PACKAGE_DIAMOND",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "PACKAGE_GOLD",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "PACKAGE_NONE",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "PACKAGE_SILVER",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "PACKAGE_STARTER",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "SECURE_FUND_PERIOD",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "YEAR",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "acceptOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      }
+    ],
+    "name": "buyPackage",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "cycle",
+        "type": "uint256"
+      }
+    ],
+    "name": "claimSecureFund",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "ctoThresholds",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "deployedAt",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "cycle",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address[]",
+        "name": "recipients",
+        "type": "address[]"
+      }
+    ],
+    "name": "distributeSecureFund",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "finalizeSecureFundCycle",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "offset",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "getIncomeHistory",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint8",
+            "name": "incomeType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "from",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "packageId",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "meta",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint40",
+            "name": "timestamp",
+            "type": "uint40"
+          }
+        ],
+        "internalType": "struct FalconCapital.IncomeRecord[]",
+        "name": "records",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getIncomeTotals",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "direct",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "matrix",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "global",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "cto",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "secureFund",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct FalconCapital.IncomeTotals",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      }
+    ],
+    "name": "getMatrixChildren",
+    "outputs": [
+      {
+        "internalType": "address[3]",
+        "name": "",
+        "type": "address[3]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      }
+    ],
+    "name": "getPackage",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "directBonus",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "secureFund",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "matrixPool",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ctoPool",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "globalPool",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "matrixPerLevel",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "globalPerLevel",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[5]",
+            "name": "ctoPerRank",
+            "type": "uint256[5]"
+          }
+        ],
+        "internalType": "struct FalconCapital.PackageConfig",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "incomeHistoryLength",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "incomeTotals",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "direct",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "matrix",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "global",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cto",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "secureFund",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      }
+    ],
+    "name": "isGlobalPoolQualified",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "isSecureFundEligible",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "isUnderEarner",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "matrices",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      },
+      {
+        "internalType": "address",
+        "name": "parent",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "childCount",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "downlineCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "rank",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "nextSecureFundAvailableAt",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paused",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paymentDecimals",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paymentToken",
+    "outputs": [
+      {
+        "internalType": "contract IERC20",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pendingOwner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "rank",
+        "type": "uint8"
+      }
+    ],
+    "name": "rankHolderCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "sponsor",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "packageId",
+        "type": "uint8"
+      }
+    ],
+    "name": "registerAndBuy",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "sponsor",
+        "type": "address"
+      }
+    ],
+    "name": "registerWithSponsor",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "rescueToken",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "secureFundBalance",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "secureFundClaimed",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "secureFundCycle",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "secureFundCyclePool",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "secureFundPayoutDue",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "secureFundTargetAmount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "secureFundTargetPercent",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "percent",
+        "type": "uint16"
+      }
+    ],
+    "name": "setSecureFundTargetPercent",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newTreasury",
+        "type": "address"
+      }
+    ],
+    "name": "setTreasury",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "treasury",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "unpause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "userCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "userList",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "users",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "registered",
+        "type": "bool"
+      },
+      {
+        "internalType": "address",
+        "name": "sponsor",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "currentPackage",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalInvested",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalEarned",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "withdrawable",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "registeredAt",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "withdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
 ] as const;
