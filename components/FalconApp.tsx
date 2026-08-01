@@ -320,17 +320,17 @@ export default function FalconApp() {
       "0x9ddb41afa46d87a2988b4e057f59a4234a62c0a6",
       "0xd1692deb1670d286376ccab9f0a3662d72106941",
       "0xbc9e7f1413989ea5dca5ac27dd499bab742696fe",
+      // previous FalconCapital deploys — force migrate to current env/default
+      "0xc5b92cf8cd14e8160ba97cac1bb5e16826b17378",
     ]);
+    const preferred = DEFAULT_CONTRACT_ADDRESS;
     if (saved && isAddress(saved) && !legacy.has(saved.toLowerCase())) {
       setContractAddr(saved);
       setContractInput(saved);
-    } else if (saved && legacy.has(saved.toLowerCase())) {
-      localStorage.setItem(STORAGE_KEY, DEFAULT_CONTRACT_ADDRESS);
-      setContractAddr(DEFAULT_CONTRACT_ADDRESS);
-      setContractInput(DEFAULT_CONTRACT_ADDRESS);
     } else {
-      setContractAddr(DEFAULT_CONTRACT_ADDRESS);
-      setContractInput(DEFAULT_CONTRACT_ADDRESS);
+      localStorage.setItem(STORAGE_KEY, preferred);
+      setContractAddr(preferred);
+      setContractInput(preferred);
     }
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
@@ -1392,13 +1392,106 @@ export default function FalconApp() {
     const tokenAddr: string =
       (await contract.paymentToken().catch(() => DEFAULT_PAYMENT_TOKEN)) || DEFAULT_PAYMENT_TOKEN;
     const token = new Contract(tokenAddr, ERC20_ABI, signer);
-    const allow: bigint = await token.allowance(address, contractAddr);
+    const spender = contract.target as string;
+    let allow: bigint = BigInt(await token.allowance(address, spender));
     if (allow >= amount) return;
+
     // Exact amount — avoids MetaMask "Unlimited spending cap / Review alert"
     showToast("MetaMask: Approve token spending (step 1/2)…");
-    const tx = await token.approve(contractAddr, amount);
+    const tx = await token.approve(spender, amount);
     await tx.wait();
+
+    // Re-read — RPC can lag one block after approve
+    allow = BigInt(await token.allowance(address, spender));
+    if (allow < amount) {
+      await new Promise((r) => window.setTimeout(r, 1200));
+      allow = BigInt(await token.allowance(address, spender));
+    }
+    if (allow < amount) {
+      throw new Error(
+        `Token approve failed — allowance ${fmtToken(allow, tokenDecimals)} < need ${fmtToken(amount, tokenDecimals)}. Confirm approve for ${shortAddr(spender, 6)}.`,
+      );
+    }
     showToast("Approved — confirm Register in MetaMask (step 2/2)…");
+  }
+
+  function friendlyTxError(label: string, e: unknown): string {
+    let msg = `${label} failed`;
+    if (!e || typeof e !== "object") return msg;
+
+    const err = e as {
+      code?: number | string;
+      reason?: string;
+      shortMessage?: string;
+      message?: string;
+      data?: string | { data?: string };
+      error?: { message?: string; code?: number; data?: string };
+      info?: { error?: { code?: number; message?: string; data?: unknown } };
+      revert?: { signature?: string; name?: string; args?: unknown[] } | null;
+    };
+
+    msg =
+      err.reason ||
+      err.shortMessage ||
+      err.error?.message ||
+      err.message ||
+      msg;
+
+    const code = err.code ?? err.error?.code ?? err.info?.error?.code;
+    const lower = String(msg).toLowerCase();
+    if (
+      code === 4001 ||
+      code === "ACTION_REJECTED" ||
+      lower.includes("user rejected") ||
+      lower.includes("user denied") ||
+      lower.includes("rejected the request")
+    ) {
+      return "Transaction rejected in MetaMask";
+    }
+
+    const rawData =
+      (typeof err.data === "string" ? err.data : err.data?.data) ||
+      err.error?.data ||
+      "";
+    if (typeof rawData === "string" && rawData.startsWith("0xfb8f41b2")) {
+      return "Token allowance missing — approve USDC spend first, then Register again";
+    }
+    if (typeof rawData === "string" && rawData.startsWith("0xe450d38c")) {
+      return `Insufficient ${tokenSymbol} balance for this package`;
+    }
+
+    const revertName = err.revert?.name || err.revert?.signature?.split("(")[0];
+    if (revertName) {
+      if (revertName === "InvalidSponsor") {
+        return "Invalid sponsor — sponsor must already be registered";
+      }
+      if (revertName === "AlreadyRegistered") {
+        return "This wallet is already registered";
+      }
+      return revertName;
+    }
+
+    const custom = String(msg).match(
+      /\b(AlreadyRegistered|AlreadyOwnsPackage|InvalidSponsor|MustStartWithStarter|MustUpgradeSequentially|NotRegistered|NothingToWithdraw|SecureFundNotReady|EnforcedPause|InvalidPackage|ERC20InsufficientAllowance|ERC20InsufficientBalance)\b/,
+    );
+    if (custom) {
+      if (custom[1] === "InvalidSponsor") {
+        return "Invalid sponsor — sponsor must already be registered";
+      }
+      if (custom[1] === "ERC20InsufficientAllowance") {
+        return "Token allowance missing — approve USDC spend first, then Register again";
+      }
+      if (custom[1] === "ERC20InsufficientBalance") {
+        return `Insufficient ${tokenSymbol} balance for this package`;
+      }
+      return custom[1];
+    }
+
+    if (lower.includes("missing revert data") || lower.includes("unknown custom error")) {
+      return `${label} failed — check: (1) BSC Testnet, (2) enough ${tokenSymbol}, (3) approve confirmed, (4) sponsor registered, (5) contract ${shortAddr(contractAddr, 6)}`;
+    }
+
+    return String(msg).slice(0, 180);
   }
 
   async function runTx(label: string, fn: () => Promise<unknown>): Promise<boolean> {
@@ -1409,46 +1502,7 @@ export default function FalconApp() {
       await refreshAll();
       return true;
     } catch (e) {
-      let msg = `${label} failed`;
-      if (e && typeof e === "object") {
-        const err = e as {
-          code?: number | string;
-          reason?: string;
-          shortMessage?: string;
-          message?: string;
-          data?: string;
-          error?: { message?: string; code?: number };
-          info?: { error?: { code?: number; message?: string } };
-        };
-        msg =
-          err.reason ||
-          err.shortMessage ||
-          err.error?.message ||
-          err.message ||
-          msg;
-        const code = err.code ?? err.error?.code ?? err.info?.error?.code;
-        const lower = String(msg).toLowerCase();
-        if (
-          code === 4001 ||
-          code === "ACTION_REJECTED" ||
-          lower.includes("user rejected") ||
-          lower.includes("user denied") ||
-          lower.includes("rejected the request")
-        ) {
-          msg = "Transaction rejected in MetaMask";
-        } else {
-          const custom = msg.match(
-            /\b(AlreadyRegistered|AlreadyOwnsPackage|InvalidSponsor|MustStartWithStarter|MustUpgradeSequentially|NotRegistered|NothingToWithdraw|SecureFundNotReady|EnforcedPause|InvalidPackage)\b/,
-          );
-          if (custom) {
-            msg =
-              custom[1] === "InvalidSponsor"
-                ? "Invalid sponsor — sponsor must already be registered"
-                : custom[1];
-          }
-        }
-      }
-      showToast(String(msg).slice(0, 180), "error");
+      showToast(friendlyTxError(label, e), "error");
       return false;
     } finally {
       setBusy(false);
@@ -1478,6 +1532,10 @@ export default function FalconApp() {
     }
     const ok = await runTx("Register", async () => {
       const { contract } = await getSignerContract();
+      const sponsorInfo = await contract.users(sponsor);
+      if (!Boolean(sponsorInfo.registered ?? sponsorInfo[0])) {
+        throw new Error("Invalid sponsor — sponsor must already be registered");
+      }
       const tx = await contract.registerWithSponsor(sponsor);
       await tx.wait();
     });
@@ -1496,6 +1554,22 @@ export default function FalconApp() {
       return;
     }
     const ok = await runTx("Register & Buy", async () => {
+      const eth = getEthereum();
+      if (eth?.request) {
+        const chainHex: string = await eth.request({ method: "eth_chainId" });
+        const chainId = Number.parseInt(chainHex, 16);
+        if (chainId !== BSC_TESTNET_CHAIN_ID) {
+          try {
+            await eth.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: `0x${BSC_TESTNET_CHAIN_ID.toString(16)}` }],
+            });
+          } catch {
+            throw new Error("Switch MetaMask to BNB Smart Chain Testnet (chainId 97)");
+          }
+        }
+      }
+
       const { contract, signer, address } = await getSignerContract();
       const pkg = await contract.getPackage(1);
       const price = BigInt(pkg.price ?? pkg[0] ?? 0);
@@ -1511,7 +1585,19 @@ export default function FalconApp() {
         );
       }
 
+      const sponsorInfo = await contract.users(sponsor);
+      if (!Boolean(sponsorInfo.registered ?? sponsorInfo[0])) {
+        throw new Error("Invalid sponsor — sponsor must already be registered");
+      }
+
       await ensureApprove(price);
+
+      try {
+        await contract.registerAndBuy.staticCall(sponsor, 1);
+      } catch (e) {
+        throw e;
+      }
+
       const tx = await contract.registerAndBuy(sponsor, 1);
       await tx.wait();
     });

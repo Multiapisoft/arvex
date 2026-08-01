@@ -735,8 +735,12 @@ export function MatrixTreeView({
               <button
                 type="button"
                 className={cn("mx-crumb-btn", last && "active")}
-                onClick={() => onPathJump(i)}
-                disabled={last}
+                title={last ? "Click to copy ID" : "Go to this position"}
+                aria-label={last ? `Copy ID ${addr}` : `Go to ${shortAddr(addr)}`}
+                onClick={() => {
+                  if (last) onCopy(addr);
+                  else onPathJump(i);
+                }}
               >
                 {i === 0 && addr.toLowerCase() === account.toLowerCase()
                   ? "You"
@@ -925,8 +929,13 @@ export function MatrixTreeView({
                         <button
                           type="button"
                           className={cn("mx-crumb-btn", last && "active")}
-                          disabled={last || modalLoading}
-                          onClick={() => void jumpModalStack(i)}
+                          disabled={!last && modalLoading}
+                          title={last ? "Click to copy ID" : "Go to this position"}
+                          aria-label={last ? `Copy ID ${addr}` : `Go to ${shortAddr(addr)}`}
+                          onClick={() => {
+                            if (last) onCopy(addr);
+                            else void jumpModalStack(i);
+                          }}
                         >
                           {addr.toLowerCase() === account.toLowerCase() ? "You" : shortAddr(addr)}
                         </button>
