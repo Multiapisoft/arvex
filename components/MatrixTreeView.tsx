@@ -795,8 +795,14 @@ export function MatrixTreeView({
           {isGlobal && activePackageId > 0 && data.globalQualified === false && (
             <div className="mx-tree-empty-hint">
               Complete <strong>3 matrix directs</strong> on {pkgName(packageId)} to enter Global
-              Autopool ({Math.min(3, data.matrixDirects ?? data.childrenCount)}/3). Qualified members
-              from your matrix appear here as they fill their 3 directs.
+              Autopool ({Math.min(3, data.matrixDirects ?? 0)}/3). First to finish 3 directs is
+              placed first — seats fill top→bottom, left→right.
+            </div>
+          )}
+          {isGlobal && activePackageId > 0 && data.globalQualified && !data.active && (
+            <div className="mx-tree-empty-hint">
+              You have 3 matrix directs on {pkgName(packageId)}. Open from the platform root or
+              refresh to see your Global Autopool seat.
             </div>
           )}
           {activePackageId === 0 && (
@@ -825,7 +831,7 @@ export function MatrixTreeView({
           <div className="mx-tree-foot">
             <p>
               {isGlobal
-                ? "Only members who completed 3 matrix directs are placed in Global Autopool — tree & downline show those users."
+                ? "Global Autopool: min 3 directs required · earliest completion places first · top→bottom, left→right."
                 : "Click any filled node to open its downline · Home / Up / breadcrumb navigate main view"}
             </p>
             {onUpgrade && (

@@ -33,6 +33,7 @@ import {
   INCOME_TYPES,
   PACKAGE_NAMES,
   PACKAGE_PRICES_USD,
+  lowGasOverrides,
 } from "@/lib/contract";
 import { explorerAddress, fmtTime, fmtToken, fmtUsd, pkgName, shortAddr } from "@/lib/format";
 import { AppShell, PageHeader } from "@/components/layout/AppShell";
@@ -323,6 +324,7 @@ export default function FalconApp() {
       // previous FalconCapital deploys — force migrate to current env/default
       "0xc5b92cf8cd14e8160ba97cac1bb5e16826b17378",
       "0xae5c77d92367f4ce78288acf2929d85a95c0d5b5",
+      "0xc296849f29197a6d92949240fc503001eeea4d80",
     ]);
     const preferred = DEFAULT_CONTRACT_ADDRESS;
     if (saved && isAddress(saved) && !legacy.has(saved.toLowerCase())) {
@@ -960,9 +962,10 @@ export default function FalconApp() {
   );
 
   /**
-   * Global Autopool tree: only members who completed 3 matrix directs
-   * (`isGlobalPoolQualified` / childCount === 3). Placed in a 3-wide tree
-   * in matrix-BFS discovery order under the focused root.
+   * Global Autopool UI tree (not raw on-chain globalMatrices):
+   * - Only users with ≥3 matrix directs are placed
+   * - First to complete 3 directs is placed first
+   * - Seats fill top→bottom, left→right (3-wide BFS under platform root)
    */
   const fetchGlobalTreeData = useCallback(
     async (rootAddr: string, pkgId: number): Promise<MatrixTreeData> => {
@@ -987,124 +990,200 @@ export default function FalconApp() {
       if (!rootAddr || !isAddress(rootAddr) || pkgId < 1 || pkgId > 5) return empty;
 
       const c = await getReadContract();
-      const MAX_SCAN = 300;
 
-      type NodeMeta = {
-        address: string;
-        parent: string;
-        childCount: number;
-        downlineCount: string;
-        rank: number;
-        matrixActive: boolean;
-        qualified: boolean;
-        kids: string[];
-      };
-
-      async function readNode(addr: string): Promise<NodeMeta | null> {
-        if (!addr || addr === ZeroAddress || !isAddress(addr)) return null;
-        try {
-          const [info, kidsRaw, qual] = await Promise.all([
-            c.matrices(addr, pkgId),
-            c.getMatrixChildren(addr, pkgId).catch(() => null),
-            c.isGlobalPoolQualified(addr, pkgId).catch(() => false),
-          ]);
-          const childCount = Number(info.childCount ?? info[2] ?? 0);
-          return {
-            address: addr,
-            parent: String(info.parent ?? info[1] ?? ""),
-            childCount,
-            downlineCount: String(info.downlineCount ?? info[3] ?? 0),
-            rank: Number(info.rank ?? info[4] ?? 0),
-            matrixActive: Boolean(info.active ?? info[0]),
-            qualified: Boolean(qual) || childCount >= 3,
-            kids: toAddr3(kidsRaw),
-          };
-        } catch {
-          return null;
-        }
-      }
+      type GNode = { address: string; parent: string; children: [string, string, string] };
 
       try {
-        const rootMeta = await readNode(rootAddr);
-        if (!rootMeta) return empty;
+        const userCount = Number(await c.userCount().catch(() => 0n));
+        if (userCount <= 0) return empty;
 
-        const byAddr = new Map<string, NodeMeta>();
-        byAddr.set(rootAddr.toLowerCase(), rootMeta);
-
-        const seen = new Set<string>([rootAddr.toLowerCase()]);
-        const queue = [...rootMeta.kids];
-        for (const k of rootMeta.kids) seen.add(k.toLowerCase());
-
-        while (queue.length > 0 && byAddr.size < MAX_SCAN) {
-          const batch = queue.splice(0, 8);
-          const nodes = await Promise.all(batch.map((a) => readNode(a)));
-          for (const node of nodes) {
-            if (!node) continue;
-            const key = node.address.toLowerCase();
-            if (byAddr.has(key)) continue;
-            byAddr.set(key, node);
-            for (const kid of node.kids) {
-              const kk = kid.toLowerCase();
-              if (!seen.has(kk)) {
-                seen.add(kk);
-                queue.push(kid);
-              }
-            }
+        const maxScan = Math.min(userCount, 500);
+        const addrs: string[] = [];
+        const CHUNK = 40;
+        for (let i = 0; i < maxScan; i += CHUNK) {
+          const indexes = Array.from({ length: Math.min(CHUNK, maxScan - i) }, (_, j) => i + j);
+          const batch = await Promise.all(
+            indexes.map((idx) => c.userList(idx).then((a: string) => String(a)).catch(() => "")),
+          );
+          for (const a of batch) {
+            if (a && isAddress(a) && a !== ZeroAddress) addrs.push(a);
           }
-          if (queue.length) await sleep(40);
+        }
+        if (!addrs.length) return empty;
+
+        const platformRoot = addrs[0];
+
+        type QualRow = {
+          address: string;
+          directs: number;
+          qualifyAt: number;
+          rank: number;
+        };
+
+        const rows: QualRow[] = [];
+        const META_BATCH = 8;
+        for (let i = 0; i < addrs.length; i += META_BATCH) {
+          const slice = addrs.slice(i, i + META_BATCH);
+          const metas = await Promise.all(
+            slice.map(async (addr) => {
+              try {
+                const [info, kidsRaw] = await Promise.all([
+                  c.matrices(addr, pkgId),
+                  c.getMatrixChildren(addr, pkgId).catch(() => null),
+                ]);
+                const directs = Number(info.childCount ?? info[2] ?? 0);
+                const kids = toAddr3(kidsRaw);
+                let qualifyAt = 0;
+                if (directs >= 3) {
+                  const times = await Promise.all(
+                    kids.map(async (k) => {
+                      if (!k) return 0;
+                      try {
+                        const u = await c.users(k);
+                        return Number(u.registeredAt ?? u[6] ?? 0);
+                      } catch {
+                        return 0;
+                      }
+                    }),
+                  );
+                  // Time the 3rd direct completed ≈ latest of the three directs
+                  qualifyAt = Math.max(0, ...times);
+                }
+                return {
+                  address: addr,
+                  directs,
+                  qualifyAt,
+                  rank: Number(info.rank ?? info[4] ?? 0),
+                } satisfies QualRow;
+              } catch {
+                return {
+                  address: addr,
+                  directs: 0,
+                  qualifyAt: 0,
+                  rank: 0,
+                } satisfies QualRow;
+              }
+            }),
+          );
+          rows.push(...metas);
+          if (i + META_BATCH < addrs.length) await sleep(30);
         }
 
-        /** Qualified descendants under `addr` in matrix (excluding addr), matrix-BFS order. */
-        function qualifiedUnder(addr: string): string[] {
-          const start = byAddr.get(addr.toLowerCase());
-          if (!start) return [];
-          const out: string[] = [];
-          const q = [...start.kids];
-          const vis = new Set<string>([addr.toLowerCase()]);
+        const byAddr = new Map(rows.map((r) => [r.address.toLowerCase(), r]));
+
+        // Qualified members only — earliest 3-direct completion first
+        const qualified = rows
+          .filter((r) => r.directs >= 3)
+          .sort((a, b) => {
+            if (a.qualifyAt !== b.qualifyAt) return a.qualifyAt - b.qualifyAt;
+            return (
+              addrs.findIndex((x) => x.toLowerCase() === a.address.toLowerCase()) -
+              addrs.findIndex((x) => x.toLowerCase() === b.address.toLowerCase())
+            );
+          });
+
+        const nodes = new Map<string, GNode>();
+        const ensure = (addr: string): GNode => {
+          const key = addr.toLowerCase();
+          let n = nodes.get(key);
+          if (!n) {
+            n = { address: addr, parent: "", children: ["", "", ""] };
+            nodes.set(key, n);
+          }
+          return n;
+        };
+
+        // Platform root anchors the Global Autopool (even before 3 directs)
+        ensure(platformRoot);
+        const bfsParents: string[] = [platformRoot];
+        let head = 0;
+
+        for (const q of qualified) {
+          if (q.address.toLowerCase() === platformRoot.toLowerCase()) continue;
+          while (head < bfsParents.length) {
+            const parent = ensure(bfsParents[head]);
+            const slot = parent.children.findIndex((x) => !x);
+            if (slot >= 0) {
+              parent.children[slot] = q.address;
+              const child = ensure(q.address);
+              child.parent = parent.address;
+              bfsParents.push(q.address);
+              break;
+            }
+            head += 1;
+          }
+        }
+
+        const focusKey = rootAddr.toLowerCase();
+        const focusMeta = byAddr.get(focusKey);
+        const focusNode = nodes.get(focusKey);
+        const matrixDirects = focusMeta?.directs ?? 0;
+        const globalQualified =
+          matrixDirects >= 3 || focusKey === platformRoot.toLowerCase();
+
+        // Focus not in Global Autopool yet — empty seats, still show matrix progress
+        if (!focusNode) {
+          return {
+            ...empty,
+            root: rootAddr,
+            active: false,
+            matrixDirects,
+            globalQualified: matrixDirects >= 3,
+            ctoRank: focusMeta?.rank ?? 0,
+          };
+        }
+
+        const childAddrs = [...focusNode.children] as [string, string, string];
+
+        function downlineOf(addr: string): number {
+          const start = nodes.get(addr.toLowerCase());
+          if (!start) return 0;
+          let n = 0;
+          const q = [...start.children.filter(Boolean)];
+          const seen = new Set<string>([addr.toLowerCase()]);
           while (q.length) {
             const cur = q.shift()!;
             const k = cur.toLowerCase();
-            if (vis.has(k)) continue;
-            vis.add(k);
-            const meta = byAddr.get(k);
-            if (!meta) continue;
-            if (meta.qualified) out.push(meta.address);
-            q.push(...meta.kids);
+            if (seen.has(k)) continue;
+            seen.add(k);
+            n += 1;
+            const node = nodes.get(k);
+            if (node) q.push(...node.children.filter(Boolean));
           }
-          return out;
+          return n;
         }
 
-        function seatFromQualified(addr: string): MatrixSeatInfo {
+        function seatOf(addr: string): MatrixSeatInfo {
           if (!addr) return emptySeat();
-          const meta = byAddr.get(addr.toLowerCase());
-          const under = qualifiedUnder(addr);
+          const node = nodes.get(addr.toLowerCase());
+          if (!node) return emptySeat();
           return {
             address: addr,
             active: true,
-            childCount: Math.min(3, under.length),
-            downline: String(under.length),
+            childCount: node.children.filter(Boolean).length,
+            downline: String(downlineOf(addr)),
           };
         }
 
-        const underRoot = qualifiedUnder(rootAddr);
-        // Flat 3× fill: as members qualify they occupy the next Global seats in BFS order
-        const childAddrs = [underRoot[0] || "", underRoot[1] || "", underRoot[2] || ""];
-        const childSeats = childAddrs.map((a) => seatFromQualified(a));
-        const grandchildren = [0, 1, 2].map((c) =>
-          [0, 1, 2].map((i) => seatFromQualified(underRoot[3 + c * 3 + i] || "")),
-        );
+        const childSeats = childAddrs.map((a) => seatOf(a));
+        const grandchildren = childAddrs.map((child) => {
+          if (!child) return [emptySeat(), emptySeat(), emptySeat()];
+          const node = nodes.get(child.toLowerCase());
+          const kids = node?.children ?? ["", "", ""];
+          return kids.map((a) => seatOf(a));
+        });
 
         return {
           root: rootAddr,
-          parent: rootMeta.parent,
-          active: rootMeta.qualified,
-          childrenCount: Math.min(3, underRoot.length),
-          downline: String(underRoot.length),
-          ctoRank: rootMeta.rank,
+          parent: focusNode.parent,
+          active: globalQualified,
+          childrenCount: childAddrs.filter(Boolean).length,
+          downline: String(downlineOf(rootAddr)),
+          ctoRank: focusMeta?.rank ?? 0,
           children: childSeats,
           grandchildren,
-          matrixDirects: rootMeta.childCount,
-          globalQualified: rootMeta.qualified,
+          matrixDirects,
+          globalQualified,
         };
       } catch {
         return empty;
@@ -1389,7 +1468,7 @@ export default function FalconApp() {
   }
 
   async function ensureApprove(amount: bigint) {
-    const { contract, signer, address } = await getSignerContract();
+    const { contract, signer, address, provider } = await getSignerContract();
     const tokenAddr: string =
       (await contract.paymentToken().catch(() => DEFAULT_PAYMENT_TOKEN)) || DEFAULT_PAYMENT_TOKEN;
     const token = new Contract(tokenAddr, ERC20_ABI, signer);
@@ -1399,7 +1478,8 @@ export default function FalconApp() {
 
     // Exact amount — avoids MetaMask "Unlimited spending cap / Review alert"
     showToast("MetaMask: Approve token spending (step 1/2)…");
-    const tx = await token.approve(spender, amount);
+    const gas = await lowGasOverrides(provider, () => token.approve.estimateGas(spender, amount));
+    const tx = await token.approve(spender, amount, gas);
     await tx.wait();
 
     // Re-read — RPC can lag one block after approve
@@ -1512,8 +1592,9 @@ export default function FalconApp() {
 
   async function onWithdraw() {
     await runTx("Withdraw", async () => {
-      const { contract } = await getSignerContract();
-      const tx = await contract.withdraw();
+      const { contract, provider } = await getSignerContract();
+      const gas = await lowGasOverrides(provider, () => contract.withdraw.estimateGas());
+      const tx = await contract.withdraw(gas);
       await tx.wait();
     });
   }
@@ -1532,12 +1613,15 @@ export default function FalconApp() {
       return;
     }
     const ok = await runTx("Register", async () => {
-      const { contract } = await getSignerContract();
+      const { contract, provider } = await getSignerContract();
       const sponsorInfo = await contract.users(sponsor);
       if (!Boolean(sponsorInfo.registered ?? sponsorInfo[0])) {
         throw new Error("Invalid sponsor — sponsor must already be registered");
       }
-      const tx = await contract.registerWithSponsor(sponsor);
+      const gas = await lowGasOverrides(provider, () =>
+        contract.registerWithSponsor.estimateGas(sponsor),
+      );
+      const tx = await contract.registerWithSponsor(sponsor, gas);
       await tx.wait();
     });
     if (ok) {
@@ -1571,7 +1655,7 @@ export default function FalconApp() {
         }
       }
 
-      const { contract, signer, address } = await getSignerContract();
+      const { contract, signer, address, provider } = await getSignerContract();
       const pkg = await contract.getPackage(1);
       const price = BigInt(pkg.price ?? pkg[0] ?? 0);
       if (price <= 0n) throw new Error("Package price unavailable — check contract");
@@ -1599,7 +1683,10 @@ export default function FalconApp() {
         throw e;
       }
 
-      const tx = await contract.registerAndBuy(sponsor, 1);
+      const gas = await lowGasOverrides(provider, () =>
+        contract.registerAndBuy.estimateGas(sponsor, 1),
+      );
+      const tx = await contract.registerAndBuy(sponsor, 1, gas);
       await tx.wait();
     });
     if (ok) {
@@ -1617,27 +1704,34 @@ export default function FalconApp() {
       return;
     }
     await runTx("Upgrade", async () => {
-      const { contract } = await getSignerContract();
+      const { contract, provider } = await getSignerContract();
       const pkg = await contract.getPackage(next);
       const price = BigInt(pkg.price ?? pkg[0] ?? 0);
       await ensureApprove(price);
-      const tx = await contract.buyPackage(next);
+      const gas = await lowGasOverrides(provider, () => contract.buyPackage.estimateGas(next));
+      const tx = await contract.buyPackage(next, gas);
       await tx.wait();
     });
   }
 
   async function onPause(doPause: boolean) {
     await runTx(doPause ? "Pause" : "Unpause", async () => {
-      const { contract } = await getSignerContract();
-      const tx = doPause ? await contract.pause() : await contract.unpause();
+      const { contract, provider } = await getSignerContract();
+      const gas = doPause
+        ? await lowGasOverrides(provider, () => contract.pause.estimateGas())
+        : await lowGasOverrides(provider, () => contract.unpause.estimateGas());
+      const tx = doPause ? await contract.pause(gas) : await contract.unpause(gas);
       await tx.wait();
     });
   }
 
   async function onFinalizeSf() {
     await runTx("Finalize Secure Fund", async () => {
-      const { contract } = await getSignerContract();
-      const tx = await contract.finalizeSecureFundCycle();
+      const { contract, provider } = await getSignerContract();
+      const gas = await lowGasOverrides(provider, () =>
+        contract.finalizeSecureFundCycle.estimateGas(),
+      );
+      const tx = await contract.finalizeSecureFundCycle(gas);
       await tx.wait();
     });
   }
@@ -1648,8 +1742,11 @@ export default function FalconApp() {
       return;
     }
     await runTx("Set Treasury", async () => {
-      const { contract } = await getSignerContract();
-      const tx = await contract.setTreasury(newTreasury);
+      const { contract, provider } = await getSignerContract();
+      const gas = await lowGasOverrides(provider, () =>
+        contract.setTreasury.estimateGas(newTreasury),
+      );
+      const tx = await contract.setTreasury(newTreasury, gas);
       await tx.wait();
     });
   }
@@ -1669,8 +1766,11 @@ export default function FalconApp() {
       return;
     }
     await runTx("Distribute Secure Fund", async () => {
-      const { contract } = await getSignerContract();
-      const tx = await contract.distributeSecureFund(cycle, recipients);
+      const { contract, provider } = await getSignerContract();
+      const gas = await lowGasOverrides(provider, () =>
+        contract.distributeSecureFund.estimateGas(cycle, recipients),
+      );
+      const tx = await contract.distributeSecureFund(cycle, recipients, gas);
       await tx.wait();
     });
   }
@@ -1682,8 +1782,11 @@ export default function FalconApp() {
       return;
     }
     await runTx("Set Secure Fund %", async () => {
-      const { contract } = await getSignerContract();
-      const tx = await contract.setSecureFundTargetPercent(pct);
+      const { contract, provider } = await getSignerContract();
+      const gas = await lowGasOverrides(provider, () =>
+        contract.setSecureFundTargetPercent.estimateGas(pct),
+      );
+      const tx = await contract.setSecureFundTargetPercent(pct, gas);
       await tx.wait();
     });
   }
@@ -1695,8 +1798,11 @@ export default function FalconApp() {
       return;
     }
     await runTx("Claim Secure Fund", async () => {
-      const { contract } = await getSignerContract();
-      const tx = await contract.claimSecureFund(cycle);
+      const { contract, provider } = await getSignerContract();
+      const gas = await lowGasOverrides(provider, () =>
+        contract.claimSecureFund.estimateGas(cycle),
+      );
+      const tx = await contract.claimSecureFund(cycle, gas);
       await tx.wait();
     });
   }
@@ -1711,9 +1817,12 @@ export default function FalconApp() {
       return;
     }
     await runTx("Rescue Token", async () => {
-      const { contract } = await getSignerContract();
+      const { contract, provider } = await getSignerContract();
       const amount = parseUnits(rescueAmount.trim(), tokenDecimals);
-      const tx = await contract.rescueToken(rescueTokenAddr, rescueTo, amount);
+      const gas = await lowGasOverrides(provider, () =>
+        contract.rescueToken.estimateGas(rescueTokenAddr, rescueTo, amount),
+      );
+      const tx = await contract.rescueToken(rescueTokenAddr, rescueTo, amount, gas);
       await tx.wait();
     });
   }
@@ -2299,8 +2408,9 @@ export default function FalconApp() {
             {currentPackage > 0 ? ` · Active: ${PACKAGE_NAMES[currentPackage]}` : ""}
           </h2>
           <p className="text-muted" style={{ fontSize: "0.82rem", margin: "0 0 0.85rem" }}>
-            Each owned package has its own 3× placement tree. Matrix shows all seats; Global
-            Autopool only includes members who completed 3 matrix directs.
+            Each owned package has its own 3× placement tree. Matrix = all seats. Global Autopool =
+            only members with 3 matrix directs, first-to-complete places first (top→bottom,
+            left→right).
           </p>
           {(userLoading || busy) && allMatrix.length === 0 ? (
             <DataLoading label="Loading package matrices…" />
