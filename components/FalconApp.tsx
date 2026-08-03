@@ -322,6 +322,7 @@ export default function FalconApp() {
       "0xbc9e7f1413989ea5dca5ac27dd499bab742696fe",
       // previous FalconCapital deploys — force migrate to current env/default
       "0xc5b92cf8cd14e8160ba97cac1bb5e16826b17378",
+      "0xae5c77d92367f4ce78288acf2929d85a95c0d5b5",
     ]);
     const preferred = DEFAULT_CONTRACT_ADDRESS;
     if (saved && isAddress(saved) && !legacy.has(saved.toLowerCase())) {
