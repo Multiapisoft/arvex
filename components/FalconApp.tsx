@@ -325,6 +325,7 @@ export default function FalconApp() {
       "0xc5b92cf8cd14e8160ba97cac1bb5e16826b17378",
       "0xae5c77d92367f4ce78288acf2929d85a95c0d5b5",
       "0xc296849f29197a6d92949240fc503001eeea4d80",
+      "0xff94b6c9103d157315d74072697622cfe79653a1",
     ]);
     const preferred = DEFAULT_CONTRACT_ADDRESS;
     if (saved && isAddress(saved) && !legacy.has(saved.toLowerCase())) {
