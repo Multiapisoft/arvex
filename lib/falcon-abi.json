@@ -388,6 +388,13 @@
     "type": "function"
   },
   {
+    "inputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }],
+    "name": "ctoAchieverCount",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "name": "ctoThresholds",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
@@ -416,6 +423,26 @@
     "name": "finalizeSecureFundCycle",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAdminStats",
+    "outputs": [
+      {
+        "components": [
+          { "internalType": "uint256", "name": "totalUsers", "type": "uint256" },
+          { "internalType": "uint256", "name": "totalInvestment", "type": "uint256" },
+          { "internalType": "uint256", "name": "totalWithdrawn", "type": "uint256" },
+          { "internalType": "uint256", "name": "balanceAmount", "type": "uint256" },
+          { "internalType": "uint256[5]", "name": "ctoAchieversByPackage", "type": "uint256[5]" }
+        ],
+        "internalType": "struct FalconCapital.AdminStats",
+        "name": "stats",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -508,6 +535,13 @@
     "type": "function"
   },
   {
+    "inputs": [{ "internalType": "uint8", "name": "packageId", "type": "uint8" }],
+    "name": "getRankHolderCounts",
+    "outputs": [{ "internalType": "uint256[5]", "name": "counts", "type": "uint256[5]" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       { "internalType": "address", "name": "", "type": "address" },
       { "internalType": "uint8", "name": "", "type": "uint8" }
@@ -548,7 +582,27 @@
       { "internalType": "address", "name": "user", "type": "address" },
       { "internalType": "uint8", "name": "packageId", "type": "uint8" }
     ],
+    "name": "isGlobalPoolEligible",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "user", "type": "address" },
+      { "internalType": "uint8", "name": "packageId", "type": "uint8" }
+    ],
     "name": "isGlobalPoolQualified",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "user", "type": "address" },
+      { "internalType": "uint8", "name": "packageId", "type": "uint8" }
+    ],
+    "name": "isInGlobalAutoPool",
     "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
     "stateMutability": "view",
     "type": "function"
@@ -639,6 +693,13 @@
     "inputs": [],
     "name": "pendingOwner",
     "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "platformBalanceAmount",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -751,6 +812,20 @@
     "name": "setTreasury",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalInvestment",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalWithdrawn",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
     "type": "function"
   },
   {

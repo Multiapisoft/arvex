@@ -223,6 +223,8 @@ export default function FalconApp() {
     grandchildren: [[], [], []] as MatrixSeatInfo[][],
     matrixDirects: 0,
     globalQualified: false,
+    globalEligible: false,
+    inGlobalAutoPool: false,
   });
   const [allMatrix, setAllMatrix] = useState<
     { pkg: number; active: boolean; downline: bigint; rank: number; children: number }[]
@@ -258,6 +260,12 @@ export default function FalconApp() {
     }[]
   >([]);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [adminStats, setAdminStats] = useState({
+    totalInvestment: 0n,
+    totalWithdrawn: 0n,
+    balanceAmount: 0n,
+    ctoAchieversByPackage: [0n, 0n, 0n, 0n, 0n] as bigint[],
+  });
 
   // Packages
   const [pkgRows, setPkgRows] = useState<
@@ -326,6 +334,7 @@ export default function FalconApp() {
       "0xae5c77d92367f4ce78288acf2929d85a95c0d5b5",
       "0xc296849f29197a6d92949240fc503001eeea4d80",
       "0xff94b6c9103d157315d74072697622cfe79653a1",
+      "0x56f312870f453bc0863c2949993ea664c0ba1cd7",
     ]);
     const preferred = DEFAULT_CONTRACT_ADDRESS;
     if (saved && isAddress(saved) && !legacy.has(saved.toLowerCase())) {
@@ -467,7 +476,7 @@ export default function FalconApp() {
       setPaymentToken(tokenAddr);
       const token = new Contract(tokenAddr, ERC20_ABI, provider);
 
-      const [sym, onchainDec, users, pkgResults, thresholdResults, bal, cycle, next, deployed, targetPct] =
+      const [sym, onchainDec, users, pkgResults, thresholdResults, bal, cycle, next, deployed, targetPct, statsRaw] =
         await Promise.all([
           token.symbol().catch(() => "USDC"),
           c.paymentDecimals().catch(() => token.decimals().catch(() => 18)),
@@ -479,6 +488,7 @@ export default function FalconApp() {
           c.nextSecureFundAvailableAt().catch(() => 0n),
           c.deployedAt().catch(() => 0n),
           c.secureFundTargetPercent().catch(() => 120),
+          c.getAdminStats().catch(() => null),
         ]);
 
       const cycleNum = Number(cycle);
@@ -489,7 +499,23 @@ export default function FalconApp() {
 
       setTokenSymbol(String(sym));
       setTokenDecimals(Number(onchainDec));
-      setTotalUsers(Number(users));
+      if (statsRaw) {
+        const totalFromStats = Number(statsRaw.totalUsers ?? statsRaw[0] ?? users);
+        setTotalUsers(totalFromStats || Number(users));
+        const rawCto = (statsRaw.ctoAchieversByPackage ?? statsRaw[4] ?? []) as readonly (
+          | bigint
+          | number
+          | string
+        )[];
+        setAdminStats({
+          totalInvestment: BigInt(statsRaw.totalInvestment ?? statsRaw[1] ?? 0),
+          totalWithdrawn: BigInt(statsRaw.totalWithdrawn ?? statsRaw[2] ?? 0),
+          balanceAmount: BigInt(statsRaw.balanceAmount ?? statsRaw[3] ?? 0),
+          ctoAchieversByPackage: [0, 1, 2, 3, 4].map((i) => BigInt(rawCto[i] ?? 0)),
+        });
+      } else {
+        setTotalUsers(Number(users));
+      }
       setPkgRows(
         pkgResults.map((p, idx) => {
           const id = idx + 1;
@@ -963,10 +989,9 @@ export default function FalconApp() {
   );
 
   /**
-   * Global Autopool UI tree (not raw on-chain globalMatrices):
-   * - Only users with ≥3 matrix directs are placed
-   * - First to complete 3 directs is placed first
-   * - Seats fill top→bottom, left→right (3-wide BFS under platform root)
+   * Global Autopool from on-chain placement (new ABI):
+   * getGlobalMatrixChildren / globalMatrices + isInGlobalAutoPool /
+   * isGlobalPoolQualified / isGlobalPoolEligible.
    */
   const fetchGlobalTreeData = useCallback(
     async (rootAddr: string, pkgId: number): Promise<MatrixTreeData> => {
@@ -987,204 +1012,71 @@ export default function FalconApp() {
         grandchildren: [[], [], []],
         matrixDirects: 0,
         globalQualified: false,
+        globalEligible: false,
+        inGlobalAutoPool: false,
       };
       if (!rootAddr || !isAddress(rootAddr) || pkgId < 1 || pkgId > 5) return empty;
 
       const c = await getReadContract();
 
-      type GNode = { address: string; parent: string; children: [string, string, string] };
-
-      try {
-        const userCount = Number(await c.userCount().catch(() => 0n));
-        if (userCount <= 0) return empty;
-
-        const maxScan = Math.min(userCount, 500);
-        const addrs: string[] = [];
-        const CHUNK = 40;
-        for (let i = 0; i < maxScan; i += CHUNK) {
-          const indexes = Array.from({ length: Math.min(CHUNK, maxScan - i) }, (_, j) => i + j);
-          const batch = await Promise.all(
-            indexes.map((idx) => c.userList(idx).then((a: string) => String(a)).catch(() => "")),
-          );
-          for (const a of batch) {
-            if (a && isAddress(a) && a !== ZeroAddress) addrs.push(a);
-          }
-        }
-        if (!addrs.length) return empty;
-
-        const platformRoot = addrs[0];
-
-        type QualRow = {
-          address: string;
-          directs: number;
-          qualifyAt: number;
-          rank: number;
-        };
-
-        const rows: QualRow[] = [];
-        const META_BATCH = 8;
-        for (let i = 0; i < addrs.length; i += META_BATCH) {
-          const slice = addrs.slice(i, i + META_BATCH);
-          const metas = await Promise.all(
-            slice.map(async (addr) => {
-              try {
-                const [info, kidsRaw] = await Promise.all([
-                  c.matrices(addr, pkgId),
-                  c.getMatrixChildren(addr, pkgId).catch(() => null),
-                ]);
-                const directs = Number(info.childCount ?? info[2] ?? 0);
-                const kids = toAddr3(kidsRaw);
-                let qualifyAt = 0;
-                if (directs >= 3) {
-                  const times = await Promise.all(
-                    kids.map(async (k) => {
-                      if (!k) return 0;
-                      try {
-                        const u = await c.users(k);
-                        return Number(u.registeredAt ?? u[6] ?? 0);
-                      } catch {
-                        return 0;
-                      }
-                    }),
-                  );
-                  // Time the 3rd direct completed ≈ latest of the three directs
-                  qualifyAt = Math.max(0, ...times);
-                }
-                return {
-                  address: addr,
-                  directs,
-                  qualifyAt,
-                  rank: Number(info.rank ?? info[4] ?? 0),
-                } satisfies QualRow;
-              } catch {
-                return {
-                  address: addr,
-                  directs: 0,
-                  qualifyAt: 0,
-                  rank: 0,
-                } satisfies QualRow;
-              }
-            }),
-          );
-          rows.push(...metas);
-          if (i + META_BATCH < addrs.length) await sleep(30);
-        }
-
-        const byAddr = new Map(rows.map((r) => [r.address.toLowerCase(), r]));
-
-        // Qualified members only — earliest 3-direct completion first
-        const qualified = rows
-          .filter((r) => r.directs >= 3)
-          .sort((a, b) => {
-            if (a.qualifyAt !== b.qualifyAt) return a.qualifyAt - b.qualifyAt;
-            return (
-              addrs.findIndex((x) => x.toLowerCase() === a.address.toLowerCase()) -
-              addrs.findIndex((x) => x.toLowerCase() === b.address.toLowerCase())
-            );
-          });
-
-        const nodes = new Map<string, GNode>();
-        const ensure = (addr: string): GNode => {
-          const key = addr.toLowerCase();
-          let n = nodes.get(key);
-          if (!n) {
-            n = { address: addr, parent: "", children: ["", "", ""] };
-            nodes.set(key, n);
-          }
-          return n;
-        };
-
-        // Platform root anchors the Global Autopool (even before 3 directs)
-        ensure(platformRoot);
-        const bfsParents: string[] = [platformRoot];
-        let head = 0;
-
-        for (const q of qualified) {
-          if (q.address.toLowerCase() === platformRoot.toLowerCase()) continue;
-          while (head < bfsParents.length) {
-            const parent = ensure(bfsParents[head]);
-            const slot = parent.children.findIndex((x) => !x);
-            if (slot >= 0) {
-              parent.children[slot] = q.address;
-              const child = ensure(q.address);
-              child.parent = parent.address;
-              bfsParents.push(q.address);
-              break;
-            }
-            head += 1;
-          }
-        }
-
-        const focusKey = rootAddr.toLowerCase();
-        const focusMeta = byAddr.get(focusKey);
-        const focusNode = nodes.get(focusKey);
-        const matrixDirects = focusMeta?.directs ?? 0;
-        const globalQualified =
-          matrixDirects >= 3 || focusKey === platformRoot.toLowerCase();
-
-        // Focus not in Global Autopool yet — empty seats, still show matrix progress
-        if (!focusNode) {
-          return {
-            ...empty,
-            root: rootAddr,
-            active: false,
-            matrixDirects,
-            globalQualified: matrixDirects >= 3,
-            ctoRank: focusMeta?.rank ?? 0,
-          };
-        }
-
-        const childAddrs = [...focusNode.children] as [string, string, string];
-
-        function downlineOf(addr: string): number {
-          const start = nodes.get(addr.toLowerCase());
-          if (!start) return 0;
-          let n = 0;
-          const q = [...start.children.filter(Boolean)];
-          const seen = new Set<string>([addr.toLowerCase()]);
-          while (q.length) {
-            const cur = q.shift()!;
-            const k = cur.toLowerCase();
-            if (seen.has(k)) continue;
-            seen.add(k);
-            n += 1;
-            const node = nodes.get(k);
-            if (node) q.push(...node.children.filter(Boolean));
-          }
-          return n;
-        }
-
-        function seatOf(addr: string): MatrixSeatInfo {
-          if (!addr) return emptySeat();
-          const node = nodes.get(addr.toLowerCase());
-          if (!node) return emptySeat();
+      async function seatOf(addr: string): Promise<MatrixSeatInfo> {
+        if (!addr || addr === ZeroAddress || !isAddress(addr)) return emptySeat();
+        try {
+          const [info, inPool] = await Promise.all([
+            c.globalMatrices(addr, pkgId),
+            c.isInGlobalAutoPool(addr, pkgId).catch(() => false),
+          ]);
           return {
             address: addr,
-            active: true,
-            childCount: node.children.filter(Boolean).length,
-            downline: String(downlineOf(addr)),
+            active: Boolean(inPool) || Boolean(info.active ?? info[0]),
+            childCount: Number(info.childCount ?? info[2] ?? 0),
+            downline: String(info.downlineCount ?? info[3] ?? 0),
           };
+        } catch {
+          return { address: addr, active: false, childCount: 0, downline: "0" };
         }
+      }
 
-        const childSeats = childAddrs.map((a) => seatOf(a));
-        const grandchildren = childAddrs.map((child) => {
-          if (!child) return [emptySeat(), emptySeat(), emptySeat()];
-          const node = nodes.get(child.toLowerCase());
-          const kids = node?.children ?? ["", "", ""];
-          return kids.map((a) => seatOf(a));
-        });
+      try {
+        const [info, childrenRaw, matrixInfo, inPool, qualified, eligible] = await Promise.all([
+          c.globalMatrices(rootAddr, pkgId),
+          c.getGlobalMatrixChildren(rootAddr, pkgId).catch(() => null),
+          c.matrices(rootAddr, pkgId).catch(() => null),
+          c.isInGlobalAutoPool(rootAddr, pkgId).catch(() => false),
+          c.isGlobalPoolQualified(rootAddr, pkgId).catch(() => false),
+          c.isGlobalPoolEligible(rootAddr, pkgId).catch(() => false),
+        ]);
+
+        const childAddrs = toAddr3(childrenRaw);
+        const childSeats = await Promise.all(childAddrs.map((a) => seatOf(a)));
+        const grandchildren = await Promise.all(
+          childAddrs.map(async (child) => {
+            if (!child) return [emptySeat(), emptySeat(), emptySeat()];
+            const gcRaw = await c.getGlobalMatrixChildren(child, pkgId).catch(() => null);
+            return Promise.all(toAddr3(gcRaw).map((a) => seatOf(a)));
+          }),
+        );
+
+        const matrixDirects = matrixInfo
+          ? Number(matrixInfo.childCount ?? matrixInfo[2] ?? 0)
+          : 0;
+        const inGlobalAutoPool = Boolean(inPool) || Boolean(info.active ?? info[0]);
+        const globalQualified = Boolean(qualified) || matrixDirects >= 3 || inGlobalAutoPool;
+        const globalEligible = Boolean(eligible);
 
         return {
           root: rootAddr,
-          parent: focusNode.parent,
-          active: globalQualified,
-          childrenCount: childAddrs.filter(Boolean).length,
-          downline: String(downlineOf(rootAddr)),
-          ctoRank: focusMeta?.rank ?? 0,
+          parent: String(info.parent ?? info[1] ?? ""),
+          active: inGlobalAutoPool,
+          childrenCount: Number(info.childCount ?? info[2] ?? 0),
+          downline: String(info.downlineCount ?? info[3] ?? 0),
+          ctoRank: Number(info.rank ?? info[4] ?? 0),
           children: childSeats,
           grandchildren,
           matrixDirects,
           globalQualified,
+          globalEligible,
+          inGlobalAutoPool,
         };
       } catch {
         return empty;
@@ -1223,6 +1115,8 @@ export default function FalconApp() {
           grandchildren: tree.grandchildren,
           matrixDirects: tree.matrixDirects ?? tree.childrenCount,
           globalQualified: tree.globalQualified ?? false,
+          globalEligible: tree.globalEligible ?? false,
+          inGlobalAutoPool: tree.inGlobalAutoPool ?? tree.active,
         });
         setMatrixFocus(root);
         setMatrixPath((prev) => {
@@ -1244,6 +1138,8 @@ export default function FalconApp() {
           grandchildren: [[], [], []],
           matrixDirects: 0,
           globalQualified: false,
+          globalEligible: false,
+          inGlobalAutoPool: false,
         });
       } finally {
         if (seq === matrixLoadSeq.current) setMatrixLoading(false);
@@ -1356,6 +1252,8 @@ export default function FalconApp() {
         grandchildren: [[], [], []],
         matrixDirects: 0,
         globalQualified: false,
+        globalEligible: false,
+        inGlobalAutoPool: false,
       });
       if (matrixFocus.toLowerCase() !== account.toLowerCase()) {
         setMatrixFocus(account);
@@ -2372,6 +2270,8 @@ export default function FalconApp() {
             grandchildren: matrixInfo.grandchildren,
             matrixDirects: matrixInfo.matrixDirects,
             globalQualified: matrixInfo.globalQualified,
+            globalEligible: matrixInfo.globalEligible,
+            inGlobalAutoPool: matrixInfo.inGlobalAutoPool,
           } satisfies MatrixTreeData}
           onPackageChange={selectMatrixPackage}
           onFocus={focusMatrixNode}
@@ -2409,9 +2309,8 @@ export default function FalconApp() {
             {currentPackage > 0 ? ` · Active: ${PACKAGE_NAMES[currentPackage]}` : ""}
           </h2>
           <p className="text-muted" style={{ fontSize: "0.82rem", margin: "0 0 0.85rem" }}>
-            Each owned package has its own 3× placement tree. Matrix = all seats. Global Autopool =
-            only members with 3 matrix directs, first-to-complete places first (top→bottom,
-            left→right).
+            Each owned package has its own 3× placement tree. Matrix = matrix seats. Global Autopool
+            = on-chain getGlobalMatrixChildren (isInGlobalAutoPool).
           </p>
           {(userLoading || busy) && allMatrix.length === 0 ? (
             <DataLoading label="Loading package matrices…" />
@@ -2999,6 +2898,41 @@ export default function FalconApp() {
             <div className="stat-value !text-left text-gradient-gold">
               {fmtUsd(sf.balance, tokenDecimals)}
             </div>
+          </div>
+          <div className="card">
+            <div className="stat-label !text-left">Total Investment</div>
+            <div className="stat-value !text-left text-gradient-gold">
+              {fmtUsd(adminStats.totalInvestment, tokenDecimals)}
+            </div>
+          </div>
+          <div className="card">
+            <div className="stat-label !text-left">Total Withdrawn</div>
+            <div className="stat-value !text-left text-gradient-gold">
+              {fmtUsd(adminStats.totalWithdrawn, tokenDecimals)}
+            </div>
+          </div>
+          <div className="card">
+            <div className="stat-label !text-left">Platform Balance</div>
+            <div className="stat-value !text-left text-gradient-gold">
+              {fmtUsd(adminStats.balanceAmount, tokenDecimals)}
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ marginBottom: "1rem" }}>
+          <h2 className="card-title">CTO Achievers by Package</h2>
+          <p className="text-muted" style={{ fontSize: "0.82rem", margin: "0 0 0.85rem" }}>
+            From getAdminStats().ctoAchieversByPackage
+          </p>
+          <div className="grid-stats">
+            {PACKAGE_NAMES.slice(1).map((name, i) => (
+              <div className="card" key={name}>
+                <div className="stat-label !text-left">{name}</div>
+                <div className="stat-value !text-left">
+                  {String(adminStats.ctoAchieversByPackage[i] ?? 0n)}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -45,6 +45,10 @@ export type MatrixTreeData = {
   matrixDirects?: number;
   /** True when this root has completed 3 matrix directs (Global Autopool qualified). */
   globalQualified?: boolean;
+  /** On-chain: eligible to earn from global pool. */
+  globalEligible?: boolean;
+  /** On-chain: already placed in Global Autopool. */
+  inGlobalAutoPool?: boolean;
 };
 
 export type MatrixTreeMode = "matrix" | "global";
@@ -202,7 +206,13 @@ function TreeBoard({
             label={rootLabel}
             levelLabel={
               globalMode
-                ? `${pkgName(packageId)} · ${data.globalQualified ? "Qualified" : "Pending"}`
+                ? `${pkgName(packageId)} · ${
+                    data.inGlobalAutoPool
+                      ? "In Pool"
+                      : data.globalQualified
+                        ? "Qualified"
+                        : "Pending"
+                  }`
                 : `${pkgName(packageId)} · Root`
             }
             isYou={isMeRoot}
@@ -517,9 +527,11 @@ export function MatrixTreeView({
             <strong className={data.active ? "text-leaf-400" : "text-danger"}>
               <i className={cn("status-dot", data.active ? "active" : "inactive")} />
               {isGlobal
-                ? data.globalQualified
-                  ? "Global Qualified"
-                  : "Not in Global yet"
+                ? data.inGlobalAutoPool
+                  ? "In Global Autopool"
+                  : data.globalQualified
+                    ? "Qualified — pending place"
+                    : "Not in Global yet"
                 : data.active
                   ? "Active"
                   : "Inactive"}
@@ -550,8 +562,24 @@ export function MatrixTreeView({
                   data.globalQualified ? "text-leaf-400" : "text-solar-400"
                 }
               >
-                {Math.min(3, data.matrixDirects ?? data.childrenCount)}/3
+                {Math.min(3, data.matrixDirects ?? 0)}/3
                 {data.globalQualified ? " · Qualified" : " · Pending"}
+              </strong>
+            </li>
+          ) : null}
+          {isGlobal ? (
+            <li>
+              <span>In Autopool</span>
+              <strong className={data.inGlobalAutoPool ? "text-leaf-400" : "text-solar-400"}>
+                {data.inGlobalAutoPool ? "Yes" : "No"}
+              </strong>
+            </li>
+          ) : null}
+          {isGlobal ? (
+            <li>
+              <span>Pool Eligible</span>
+              <strong className={data.globalEligible ? "text-leaf-400" : "text-solar-400"}>
+                {data.globalEligible ? "Yes" : "No"}
               </strong>
             </li>
           ) : null}
@@ -792,17 +820,20 @@ export function MatrixTreeView({
               Your {pkgName(packageId)} matrix seat is not active yet. Buy or refresh after purchase.
             </div>
           )}
-          {isGlobal && activePackageId > 0 && data.globalQualified === false && (
+          {isGlobal && activePackageId > 0 && !data.inGlobalAutoPool && (
             <div className="mx-tree-empty-hint">
-              Complete <strong>3 matrix directs</strong> on {pkgName(packageId)} to enter Global
-              Autopool ({Math.min(3, data.matrixDirects ?? 0)}/3). First to finish 3 directs is
-              placed first — seats fill top→bottom, left→right.
-            </div>
-          )}
-          {isGlobal && activePackageId > 0 && data.globalQualified && !data.active && (
-            <div className="mx-tree-empty-hint">
-              You have 3 matrix directs on {pkgName(packageId)}. Open from the platform root or
-              refresh to see your Global Autopool seat.
+              {data.globalQualified ? (
+                <>
+                  You are <strong>qualified</strong> on {pkgName(packageId)} (
+                  {Math.min(3, data.matrixDirects ?? 0)}/3 directs). Waiting for Global Autopool
+                  placement — seats follow on-chain order (top→bottom, left→right).
+                </>
+              ) : (
+                <>
+                  Complete <strong>3 matrix directs</strong> on {pkgName(packageId)} to enter Global
+                  Autopool ({Math.min(3, data.matrixDirects ?? 0)}/3). First to finish places first.
+                </>
+              )}
             </div>
           )}
           {activePackageId === 0 && (
@@ -831,7 +862,7 @@ export function MatrixTreeView({
           <div className="mx-tree-foot">
             <p>
               {isGlobal
-                ? "Global Autopool: min 3 directs required · earliest completion places first · top→bottom, left→right."
+                ? "Global Autopool seats from getGlobalMatrixChildren · isInGlobalAutoPool marks placed IDs."
                 : "Click any filled node to open its downline · Home / Up / breadcrumb navigate main view"}
             </p>
             {onUpgrade && (
