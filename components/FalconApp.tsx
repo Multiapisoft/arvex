@@ -25,6 +25,7 @@ import {
 import {
   BSC_TESTNET_CHAIN_ID,
   BSC_TESTNET_RPC,
+  CTO_RANK_COUNT,
   DEFAULT_CONTRACT_ADDRESS,
   DEFAULT_PAYMENT_TOKEN,
   ERC20_ABI,
@@ -335,6 +336,7 @@ export default function FalconApp() {
       "0xc296849f29197a6d92949240fc503001eeea4d80",
       "0xff94b6c9103d157315d74072697622cfe79653a1",
       "0x56f312870f453bc0863c2949993ea664c0ba1cd7",
+      "0x27aeb6069f5b504caf6bdc603fac5560a50b9c47",
     ]);
     const preferred = DEFAULT_CONTRACT_ADDRESS;
     if (saved && isAddress(saved) && !legacy.has(saved.toLowerCase())) {
@@ -482,7 +484,11 @@ export default function FalconApp() {
           c.paymentDecimals().catch(() => token.decimals().catch(() => 18)),
           c.userCount().catch(() => 0n),
           Promise.all([1, 2, 3, 4, 5].map((id) => c.getPackage(id).catch(() => null))),
-          Promise.all([0, 1, 2, 3, 4].map((i) => c.ctoThresholds(i).catch(() => 0n))),
+          Promise.all(
+            Array.from({ length: CTO_RANK_COUNT }, (_, i) =>
+              c.ctoThresholds(i).catch(() => 0n),
+            ),
+          ),
           c.secureFundBalance().catch(() => 0n),
           c.secureFundCycle().catch(() => 0n),
           c.nextSecureFundAvailableAt().catch(() => 0n),
@@ -519,7 +525,7 @@ export default function FalconApp() {
       setPkgRows(
         pkgResults.map((p, idx) => {
           const id = idx + 1;
-          const emptyRanks = [0n, 0n, 0n, 0n, 0n];
+          const emptyRanks = Array.from({ length: CTO_RANK_COUNT }, () => 0n);
           if (!p) {
             return {
               id,
@@ -541,7 +547,9 @@ export default function FalconApp() {
             | boolean
             | undefined
           )[];
-          const ctoPerRank = [0, 1, 2, 3, 4].map((i) => BigInt(rawRanks[i] ?? 0));
+          const ctoPerRank = Array.from({ length: CTO_RANK_COUNT }, (_, i) =>
+            BigInt(rawRanks[i] ?? 0),
+          );
           return {
             id,
             price: BigInt(p.price ?? p[0] ?? 0),
@@ -2349,7 +2357,7 @@ export default function FalconApp() {
             Rank thresholds:{" "}
             {ctoThresholds.length
               ? ctoThresholds.map((t, i) => `Rank${i + 1}=${String(t)}`).join(" · ")
-              : "Rank1=27 · Rank2=243 · Rank3=2187 · Rank4=19683 · Rank5=59049"}{" "}
+              : "Rank1=39 · Rank2=363 · Rank3=3279 · Rank4=29523"}{" "}
             downline
           </p>
         </div>
@@ -2620,7 +2628,7 @@ export default function FalconApp() {
                   globalPool: 0n,
                   matrixPerLevel: 0n,
                   globalPerLevel: 0n,
-                  ctoPerRank: [0n, 0n, 0n, 0n, 0n],
+                  ctoPerRank: Array.from({ length: CTO_RANK_COUNT }, () => 0n),
                 }))
             ).map((p) => (
               <div className="pkg-card" key={p.id}>
@@ -2726,11 +2734,9 @@ export default function FalconApp() {
                 <tr>
                   <th>Package</th>
                   <th>Rank pool</th>
-                  <th>Rank 1</th>
-                  <th>Rank 2</th>
-                  <th>Rank 3</th>
-                  <th>Rank 4</th>
-                  <th>Rank 5</th>
+                  {Array.from({ length: CTO_RANK_COUNT }, (_, i) => (
+                    <th key={i}>Rank {i + 1}</th>
+                  ))}
                   <th>Check</th>
                 </tr>
               </thead>
@@ -2738,15 +2744,15 @@ export default function FalconApp() {
                 {pkgRows.map((p) => {
                   const ranks = p.ctoPerRank?.length
                     ? p.ctoPerRank
-                    : [0n, 0n, 0n, 0n, 0n];
+                    : Array.from({ length: CTO_RANK_COUNT }, () => 0n);
                   const sum = ranks.reduce((a, b) => a + b, 0n);
                   const ok = sum === p.ctoPool;
                   return (
                     <tr key={p.id}>
                       <td>{PACKAGE_NAMES[p.id]}</td>
                       <td>{fmtUsd(p.ctoPool, tokenDecimals)}</td>
-                      {ranks.map((amt, i) => (
-                        <td key={i}>{fmtUsd(amt, tokenDecimals)}</td>
+                      {Array.from({ length: CTO_RANK_COUNT }, (_, i) => (
+                        <td key={i}>{fmtUsd(ranks[i] ?? 0n, tokenDecimals)}</td>
                       ))}
                       <td style={{ color: ok ? "var(--color-success)" : "var(--color-danger)" }}>
                         {ok ? "OK" : "Mismatch"}
@@ -2761,7 +2767,7 @@ export default function FalconApp() {
             Rank thresholds:{" "}
             {ctoThresholds.length
               ? ctoThresholds.map((t, i) => `R${i + 1}=${String(t)}`).join(" · ")
-              : "R1=27 · R2=243 · R3=2187 · R4=19683 · R5=59049"}{" "}
+              : "R1=27 · R2=243 · R3=2187 · R4=19683"}{" "}
             downline. Each qualified rank gets its share from the Rank pool.
           </p>
         </div>

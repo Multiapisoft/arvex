@@ -524,7 +524,7 @@
           { "internalType": "uint256", "name": "globalPool", "type": "uint256" },
           { "internalType": "uint256", "name": "matrixPerLevel", "type": "uint256" },
           { "internalType": "uint256", "name": "globalPerLevel", "type": "uint256" },
-          { "internalType": "uint256[5]", "name": "ctoPerRank", "type": "uint256[5]" }
+          { "internalType": "uint256[4]", "name": "ctoPerRank", "type": "uint256[4]" }
         ],
         "internalType": "struct FalconCapital.PackageConfig",
         "name": "",
@@ -537,7 +537,7 @@
   {
     "inputs": [{ "internalType": "uint8", "name": "packageId", "type": "uint8" }],
     "name": "getRankHolderCounts",
-    "outputs": [{ "internalType": "uint256[5]", "name": "counts", "type": "uint256[5]" }],
+    "outputs": [{ "internalType": "uint256[4]", "name": "counts", "type": "uint256[4]" }],
     "stateMutability": "view",
     "type": "function"
   },

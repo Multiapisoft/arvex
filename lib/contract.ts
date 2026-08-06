@@ -41,12 +41,15 @@ export const EXPLORER_BASE = "https://testnet.bscscan.com";
 /** Override via NEXT_PUBLIC_CONTRACT_ADDRESS or Advanced UI. */
 export const DEFAULT_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
-  "0x27Aeb6069f5b504caf6Bdc603Fac5560a50b9c47";
+  "0x1A503Cf272a102f8957B1F117969FC69d6C27577";
 
 /** Default USDC (payment token) on BSC Testnet. */
 export const DEFAULT_PAYMENT_TOKEN =
   process.env.NEXT_PUBLIC_PAYMENT_TOKEN ||
   "0x4aE58BfC16b20bD67755FFD5560e85779D962415";
+
+/** CTO ranks per package (on-chain CTO_RANKS / ctoPerRank length). */
+export const CTO_RANK_COUNT = 4;
 
 export const PACKAGE_NAMES = [
   "",

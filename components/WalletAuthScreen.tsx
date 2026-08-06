@@ -6,6 +6,7 @@ import {
   Layers,
   Loader2,
   ShieldCheck,
+  Trophy,
   Users,
   Wallet,
 } from "lucide-react";
@@ -48,7 +49,12 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: "Secure Fund",
-    text: "Non-custodial wallet — your keys, your coins.",
+    text: "Periodic secure-fund cycles with on-chain claims.",
+  },
+  {
+    icon: Trophy,
+    title: "CTO Reward",
+    text: "Rank rewards from package CTO pools as downline grows.",
   },
 ] as const;
 
@@ -82,7 +88,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
           <h1 className="wallet-auth-title">
             <span className="text-solar-400">FALCONE</span> CAPITAL
           </h1>
-          <p className="wallet-auth-sub">Packages · Matrix · Secure Fund</p>
+          <p className="wallet-auth-sub">Packages · Matrix · Secure Fund · CTO Reward</p>
           <p className="wallet-auth-desc">
             Connect your wallet to join, upgrade packages, and manage income on
             BNB Smart Chain Testnet.
