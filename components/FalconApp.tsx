@@ -31,6 +31,7 @@ import {
   DEFAULT_PAYMENT_TOKEN,
   ensureBscMainnet,
   PAYMENT_TOKEN_SYMBOL,
+  WITHDRAW_FEE_PERCENT,
   ERC20_ABI,
   EXPLORER_BASE,
   FALCON_ABI,
@@ -315,10 +316,10 @@ export default function FalconApp() {
   const [treasury, setTreasury] = useState("");
   const [newTreasury, setNewTreasury] = useState("");
   const [sfDistributeRecipients, setSfDistributeRecipients] = useState("");
-  const [rescueTokenAddr, setRescueTokenAddr] = useState("");
-  const [rescueTo, setRescueTo] = useState("");
-  const [rescueAmount, setRescueAmount] = useState("");
-  const [rescueableAmt, setRescueableAmt] = useState<bigint | null>(null);
+  const [transferTokenAddr, setTransferTokenAddr] = useState("");
+  const [transferTo, setTransferTo] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [transferableAmt, setTransferableAmt] = useState<bigint | null>(null);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -635,7 +636,7 @@ export default function FalconApp() {
       const tokenAddr = paymentToken || DEFAULT_PAYMENT_TOKEN;
       const token = new Contract(tokenAddr, ERC20_ABI, provider);
 
-      const [u, pools, secureElig, bal, allow, owner, pausedVal, treasuryVal, matrixInfos, payoutDue, targetAmt, claimable, lastEpoch, epoch, investedBasis] =
+      const [u, pools, secureElig, bal, allow, ownerAddr, adminAddr, pausedVal, treasuryVal, matrixInfos, payoutDue, targetAmt, claimable, lastEpoch, epoch, investedBasis] =
         await Promise.all([
           c.users(account),
           c.getIncomeTotals(account).catch(() => null),
@@ -643,6 +644,7 @@ export default function FalconApp() {
           token.balanceOf(account).catch(() => 0n),
           token.allowance(account, contractAddr).catch(() => 0n),
           c.owner().catch(() => ZeroAddress),
+          c.admin().catch(() => ZeroAddress),
           c.paused().catch(() => false),
           c.treasury().catch(() => ""),
           Promise.all([1, 2, 3, 4, 5].map((id) => c.matrices(account, id).catch(() => null))),
@@ -699,7 +701,10 @@ export default function FalconApp() {
       setSecureEligible(Boolean(secureElig));
       setBalance(BigInt(bal));
       setAllowance(BigInt(allow));
-      setIsOwner(String(owner).toLowerCase() === account.toLowerCase());
+      setIsOwner(
+        String(ownerAddr).toLowerCase() === account.toLowerCase() ||
+          String(adminAddr).toLowerCase() === account.toLowerCase(),
+      );
       setPaused(Boolean(pausedVal));
       setTreasury(String(treasuryVal || ""));
       setAllMatrix(
@@ -1676,37 +1681,37 @@ export default function FalconApp() {
     });
   }
 
-  async function onCheckRescueable() {
-    if (!isAddress(rescueTokenAddr)) {
+  async function onCheckTransferable() {
+    if (!isAddress(transferTokenAddr)) {
       showToast("Invalid token address", "error");
       return;
     }
     try {
       const c = await getReadContract();
-      const amt = await c.rescueableAmount(rescueTokenAddr);
-      setRescueableAmt(BigInt(amt));
+      const amt = await c.transferableAmount(transferTokenAddr);
+      setTransferableAmt(BigInt(amt));
     } catch {
-      setRescueableAmt(null);
-      showToast("Could not read rescueable amount", "error");
+      setTransferableAmt(null);
+      showToast("Could not read transferable amount", "error");
     }
   }
 
-  async function onRescueToken() {
-    if (!isAddress(rescueTokenAddr) || !isAddress(rescueTo)) {
+  async function onTransferToken() {
+    if (!isAddress(transferTokenAddr) || !isAddress(transferTo)) {
       showToast("Invalid token or recipient address", "error");
       return;
     }
-    if (!rescueAmount.trim()) {
+    if (!transferAmount.trim()) {
       showToast("Enter amount", "error");
       return;
     }
-    await runTx("Rescue Token", async () => {
+    await runTx("Transfer Token", async () => {
       const { contract, provider } = await getSignerContract();
-      const amount = parseUnits(rescueAmount.trim(), tokenDecimals);
+      const amount = parseUnits(transferAmount.trim(), tokenDecimals);
       const gas = await lowGasOverrides(provider, () =>
-        contract.rescueToken.estimateGas(rescueTokenAddr, rescueTo, amount),
+        contract.transferToken.estimateGas(transferTokenAddr, transferTo, amount),
       );
-      const tx = await contract.rescueToken(rescueTokenAddr, rescueTo, amount, gas);
+      const tx = await contract.transferToken(transferTokenAddr, transferTo, amount, gas);
       await tx.wait();
     });
   }
@@ -1730,18 +1735,9 @@ export default function FalconApp() {
       ? `$${formatUnits(nextPackageConfig.price, tokenDecimals)}`
       : `$${PACKAGE_PRICES_USD[currentPackage + 1] || 0}`;
 
-  /** Starter is excluded from Secure Fund target/payable display. */
-  const starterPrice =
-    pkgRows.find((p) => p.id === 1)?.price ??
-    parseUnits(String(PACKAGE_PRICES_USD[1]), tokenDecimals);
-  const starterSecureShare =
-    currentPackage >= 1
-      ? (starterPrice * BigInt(sf.targetPercent || 100)) / 100n
-      : 0n;
-  const sfTargetDisplay =
-    sfTargetAmount > starterSecureShare ? sfTargetAmount - starterSecureShare : 0n;
-  const sfPayableDisplay =
-    sfPayoutDue > starterSecureShare ? sfPayoutDue - starterSecureShare : 0n;
+  // On-chain already excludes Starter from SF basis — use values as-is.
+  const sfTargetDisplay = sfTargetAmount;
+  const sfPayableDisplay = sfPayoutDue;
 
   const canUpgrade =
     Boolean(account) && registered && currentPackage >= 1 && currentPackage < 5;
@@ -2810,8 +2806,18 @@ export default function FalconApp() {
               >
                 {fmtUsd(withdrawable, tokenDecimals)}
               </div>
-              <p className="text-muted" style={{ fontSize: "0.85rem", margin: "0 0 1.25rem" }}>
+              <p className="text-muted" style={{ fontSize: "0.85rem", margin: "0 0 0.5rem" }}>
                 Total withdrawn: {fmtUsd(userTotalWithdrawn, tokenDecimals)}
+              </p>
+              <p className="text-muted" style={{ fontSize: "0.82rem", margin: "0 0 1.25rem" }}>
+                Admin fee {WITHDRAW_FEE_PERCENT}% — you receive{" "}
+                {withdrawable > 0n
+                  ? fmtUsd(
+                      withdrawable - (withdrawable * BigInt(WITHDRAW_FEE_PERCENT)) / 100n,
+                      tokenDecimals,
+                    )
+                  : "$0"}{" "}
+                · fee goes to treasury
               </p>
               <button
                 className="btn btn-primary"
@@ -2820,7 +2826,10 @@ export default function FalconApp() {
                 onClick={() => void onWithdraw()}
               >
                 {withdrawable > 0n
-                  ? `Withdraw ${fmtUsd(withdrawable, tokenDecimals)}`
+                  ? `Withdraw ${fmtUsd(
+                      withdrawable - (withdrawable * BigInt(WITHDRAW_FEE_PERCENT)) / 100n,
+                      tokenDecimals,
+                    )} (after ${WITHDRAW_FEE_PERCENT}% fee)`
                   : "Nothing to withdraw"}
               </button>
             </>
@@ -2960,11 +2969,16 @@ export default function FalconApp() {
               onClick={() => void onClaimSecureFund()}
             >
               Claim Secure Fund
-              {sfClaimable > 0n ? ` · ${fmtUsd(sfClaimable, tokenDecimals)}` : ""}
+              {sfClaimable > 0n
+                ? ` · ${fmtUsd(
+                    sfClaimable - (sfClaimable * BigInt(WITHDRAW_FEE_PERCENT)) / 100n,
+                    tokenDecimals,
+                  )} after ${WITHDRAW_FEE_PERCENT}% fee`
+                : ""}
             </button>
             <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: "1rem" }}>
-              Silver+ packages contribute to Secure Fund. Eligible under-earners can claim when
-              an epoch has claimable balance.
+              Silver+ only (Starter excluded from target). Claim pays wallet directly with{" "}
+              {WITHDRAW_FEE_PERCENT}% admin fee. Period = 1 year.
             </p>
               </>
             )}
@@ -3143,19 +3157,19 @@ export default function FalconApp() {
         </div>
 
         <div className="card">
-          <h2 className="card-title">Rescue Token</h2>
+          <h2 className="card-title">Transfer Token</h2>
           <p className="text-muted" style={{ fontSize: "0.82rem" }}>
-            Withdraw stuck ERC-20 tokens from the contract (owner only).
+            Admin `transferToken` — move any ERC-20 held by the contract (owner only).
           </p>
           <div className="grid-two" style={{ marginTop: "0.75rem" }}>
             <div className="field">
               <label className="label">Token</label>
               <input
                 className="input"
-                value={rescueTokenAddr}
+                value={transferTokenAddr}
                 onChange={(e) => {
-                  setRescueTokenAddr(e.target.value.trim());
-                  setRescueableAmt(null);
+                  setTransferTokenAddr(e.target.value.trim());
+                  setTransferableAmt(null);
                 }}
                 placeholder="0x token…"
                 spellCheck={false}
@@ -3165,8 +3179,8 @@ export default function FalconApp() {
               <label className="label">To</label>
               <input
                 className="input"
-                value={rescueTo}
-                onChange={(e) => setRescueTo(e.target.value.trim())}
+                value={transferTo}
+                onChange={(e) => setTransferTo(e.target.value.trim())}
                 placeholder="0x recipient…"
                 spellCheck={false}
               />
@@ -3176,14 +3190,14 @@ export default function FalconApp() {
             <button
               className="btn btn-ghost"
               type="button"
-              disabled={busy || !rescueTokenAddr}
-              onClick={() => void onCheckRescueable()}
+              disabled={busy || !transferTokenAddr}
+              onClick={() => void onCheckTransferable()}
             >
-              Check Rescueable
+              Check Transferable
             </button>
-            {rescueableAmt !== null && (
+            {transferableAmt !== null && (
               <span className="text-muted" style={{ fontSize: "0.85rem" }}>
-                Rescueable: {fmtUsd(rescueableAmt, tokenDecimals)}
+                Transferable: {fmtUsd(transferableAmt, tokenDecimals)}
               </span>
             )}
           </div>
@@ -3191,8 +3205,8 @@ export default function FalconApp() {
             <label className="label">Amount ({tokenSymbol})</label>
             <input
               className="input"
-              value={rescueAmount}
-              onChange={(e) => setRescueAmount(e.target.value.trim())}
+              value={transferAmount}
+              onChange={(e) => setTransferAmount(e.target.value.trim())}
               placeholder="0.0"
             />
           </div>
@@ -3201,9 +3215,9 @@ export default function FalconApp() {
             type="button"
             style={{ marginTop: "0.75rem" }}
             disabled={busy}
-            onClick={() => void onRescueToken()}
+            onClick={() => void onTransferToken()}
           >
-            Rescue Token
+            Transfer Token
           </button>
         </div>
       </section>
@@ -3213,7 +3227,7 @@ export default function FalconApp() {
           <div className="card">
             <h2 className="card-title">Access Denied</h2>
             <p className="text-muted">
-              Admin Panel is only available when the connected wallet is the contract owner.
+              Admin Panel is only available when the connected wallet is the contract admin/owner.
             </p>
           </div>
         </section>

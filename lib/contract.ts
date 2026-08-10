@@ -26,6 +26,8 @@ export const DEFAULT_PAYMENT_TOKEN = "0x55d398326f99059fF775485246999027B3197955
 
 export const PAYMENT_TOKEN_SYMBOL = "USDT";
 export const PAYMENT_TOKEN_DECIMALS = 18;
+/** Matches on-chain WITHDRAW_FEE_PERCENT (admin fee on withdraw / SF claim). */
+export const WITHDRAW_FEE_PERCENT = 10;
 
 /**
  * Lowest practical gas for BSC writes.
