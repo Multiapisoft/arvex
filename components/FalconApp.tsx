@@ -24,11 +24,13 @@ import {
   Wallet,
 } from "lucide-react";
 import {
-  BSC_TESTNET_CHAIN_ID,
-  BSC_TESTNET_RPC,
+  BSC_CHAIN_ID,
+  BSC_RPC,
   CTO_RANK_COUNT,
   DEFAULT_CONTRACT_ADDRESS,
   DEFAULT_PAYMENT_TOKEN,
+  ensureBscMainnet,
+  PAYMENT_TOKEN_SYMBOL,
   ERC20_ABI,
   EXPLORER_BASE,
   FALCON_ABI,
@@ -171,7 +173,7 @@ export default function FalconApp() {
   const [staticLoading, setStaticLoading] = useState(false);
   const [userLoading, setUserLoading] = useState(false);
   const [incomeLoading, setIncomeLoading] = useState(false);
-  const [tokenSymbol, setTokenSymbol] = useState("USDC");
+  const [tokenSymbol, setTokenSymbol] = useState(PAYMENT_TOKEN_SYMBOL);
   const [tokenDecimals, setTokenDecimals] = useState(18);
   const [paymentToken, setPaymentToken] = useState(DEFAULT_PAYMENT_TOKEN);
 
@@ -416,7 +418,7 @@ export default function FalconApp() {
   const getReadProvider = useCallback(() => {
     // Reuse one provider — creating a new JsonRpcProvider per call is slow.
     if (!readProviderRef.current) {
-      readProviderRef.current = new JsonRpcProvider(BSC_TESTNET_RPC, BSC_TESTNET_CHAIN_ID, {
+      readProviderRef.current = new JsonRpcProvider(BSC_RPC, BSC_CHAIN_ID, {
         staticNetwork: true,
       });
     }
@@ -426,17 +428,11 @@ export default function FalconApp() {
   const getSignerContract = useCallback(async () => {
     const eth = getEthereum();
     if (!eth) throw new Error("MetaMask / Web3 wallet not found");
+    await ensureBscMainnet(eth);
     const provider = new BrowserProvider(eth);
     const network = await provider.getNetwork();
-    if (Number(network.chainId) !== BSC_TESTNET_CHAIN_ID) {
-      try {
-        await eth.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: "0x61" }],
-        });
-      } catch {
-        throw new Error("Please switch to BSC Testnet (chainId 97)");
-      }
+    if (Number(network.chainId) !== BSC_CHAIN_ID) {
+      throw new Error("Please switch to BNB Smart Chain (chainId 56)");
     }
     const signer = await provider.getSigner();
     if (!isAddress(contractAddr) || contractAddr === ZeroAddress) {
@@ -469,7 +465,7 @@ export default function FalconApp() {
 
       const [sym, onchainDec, users, pkgResults, thresholdResults, bal, epoch, next, deployed, targetPct, statsRaw] =
         await Promise.all([
-          token.symbol().catch(() => "USDC"),
+          token.symbol().catch(() => PAYMENT_TOKEN_SYMBOL),
           c.paymentDecimals().catch(() => token.decimals().catch(() => 18)),
           c.userCount().catch(() => 0n),
           Promise.all([1, 2, 3, 4, 5].map((id) => c.getPackage(id).catch(() => null))),
@@ -1374,7 +1370,7 @@ export default function FalconApp() {
     if (allow >= amount) return;
 
     // Exact amount — avoids MetaMask "Unlimited spending cap / Review alert"
-    showToast("MetaMask: Approve token spending (step 1/2)…");
+    showToast("MetaMask: Approve USDT spending (step 1/2)…");
     const gas = await lowGasOverrides(provider, () => token.approve.estimateGas(spender, amount));
     const tx = await token.approve(spender, amount, gas);
     await tx.wait();
@@ -1432,7 +1428,7 @@ export default function FalconApp() {
       err.error?.data ||
       "";
     if (typeof rawData === "string" && rawData.startsWith("0xfb8f41b2")) {
-      return "Token allowance missing — approve USDC spend first, then Register again";
+      return "Token allowance missing — approve USDT spend first, then Register again";
     }
     if (typeof rawData === "string" && rawData.startsWith("0xe450d38c")) {
       return `Insufficient ${tokenSymbol} balance for this package`;
@@ -1457,7 +1453,7 @@ export default function FalconApp() {
         return "Invalid sponsor — sponsor must already be registered";
       }
       if (custom[1] === "ERC20InsufficientAllowance") {
-        return "Token allowance missing — approve USDC spend first, then Register again";
+        return "Token allowance missing — approve USDT spend first, then Register again";
       }
       if (custom[1] === "ERC20InsufficientBalance") {
         return `Insufficient ${tokenSymbol} balance for this package`;
@@ -1466,7 +1462,7 @@ export default function FalconApp() {
     }
 
     if (lower.includes("missing revert data") || lower.includes("unknown custom error")) {
-      return `${label} failed — check: (1) BSC Testnet, (2) enough ${tokenSymbol}, (3) approve confirmed, (4) sponsor registered, (5) contract ${shortAddr(contractAddr, 6)}`;
+      return `${label} failed — check: (1) BSC Mainnet, (2) enough ${tokenSymbol}, (3) USDT approve confirmed, (4) sponsor registered, (5) contract ${shortAddr(contractAddr, 6)}`;
     }
 
     return String(msg).slice(0, 180);
@@ -1538,18 +1534,7 @@ export default function FalconApp() {
     const ok = await runTx("Register & Buy", async () => {
       const eth = getEthereum();
       if (eth?.request) {
-        const chainHex: string = await eth.request({ method: "eth_chainId" });
-        const chainId = Number.parseInt(chainHex, 16);
-        if (chainId !== BSC_TESTNET_CHAIN_ID) {
-          try {
-            await eth.request({
-              method: "wallet_switchEthereumChain",
-              params: [{ chainId: `0x${BSC_TESTNET_CHAIN_ID.toString(16)}` }],
-            });
-          } catch {
-            throw new Error("Switch MetaMask to BNB Smart Chain Testnet (chainId 97)");
-          }
-        }
+        await ensureBscMainnet(eth);
       }
 
       const { contract, signer, address, provider } = await getSignerContract();
@@ -1921,7 +1906,7 @@ export default function FalconApp() {
             "—"
           )}
         </span>
-        <span className="badge badge-success">BSC Testnet · Live</span>
+        <span className="badge badge-success">BSC Mainnet · USDT</span>
       </div>
 
       <details className="card mb-4">
@@ -2845,7 +2830,7 @@ export default function FalconApp() {
         <div className="card">
           <h2 className="card-title">History</h2>
           <p className="text-muted" style={{ fontSize: "0.85rem", margin: "0 0 1rem" }}>
-            View your on-chain transactions on BscScan Testnet.
+            View your on-chain transactions on BscScan.
           </p>
           <div className="flex flex-wrap gap-2">
             {account ? (

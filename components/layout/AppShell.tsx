@@ -27,7 +27,7 @@ type AppShellProps = {
 
 export function AppShell({
   title,
-  subtitle = "BSC Testnet · Building Value, Securing Futures",
+  subtitle = "BSC Mainnet · USDT · Building Value, Securing Futures",
   navItems,
   primaryNavItems,
   activeId,
@@ -97,7 +97,7 @@ export function AppShell({
       <aside className="sidebar hidden md:flex">
         {brand}
         <div className="mt-6 flex-1 overflow-y-auto">{nav}</div>
-        <p className="mt-4 px-1.5 text-2xs text-muted-foreground">BNB Testnet · chainId 97</p>
+        <p className="mt-4 px-1.5 text-2xs text-muted-foreground">BNB Mainnet · chainId 56 · USDT</p>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">

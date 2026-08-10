@@ -91,7 +91,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
           <p className="wallet-auth-sub">Packages · Matrix · Secure Fund · CTO Reward</p>
           <p className="wallet-auth-desc">
             Connect your wallet to join, upgrade packages, and manage income on
-            BNB Smart Chain Testnet.
+            BNB Smart Chain (USDT).
           </p>
 
           <ul className="wallet-auth-features">
@@ -130,7 +130,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                   Connect Wallet
                 </button>
                 <p className="wallet-auth-network">
-                  Target network: BNB Smart Chain Testnet — chainId 97
+                  Target network: BNB Smart Chain — chainId 56 · USDT
                 </p>
               </>
             )}
@@ -218,7 +218,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                 </div>
 
                 <p className="wallet-auth-network">
-                  Target network: BNB Smart Chain Testnet — chainId 97
+                  Target network: BNB Smart Chain — chainId 56 · USDT
                 </p>
               </>
             )}
