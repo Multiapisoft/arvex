@@ -288,15 +288,15 @@ export default function FalconApp() {
   // Secure fund
   const [sf, setSf] = useState({
     balance: 0n,
-    cycle: 0,
+    epoch: 0,
     next: 0,
     deployed: 0,
     targetPercent: 120,
-    cyclePool: 0n,
   });
   const [sfPayoutDue, setSfPayoutDue] = useState(0n);
+  const [sfClaimable, setSfClaimable] = useState(0n);
   const [sfTargetAmount, setSfTargetAmount] = useState(0n);
-  const [sfClaimed, setSfClaimed] = useState(false);
+  const [sfLastClaimedEpoch, setSfLastClaimedEpoch] = useState(0);
   const [sfTargetInput, setSfTargetInput] = useState("120");
 
   // On-chain admin
@@ -304,11 +304,11 @@ export default function FalconApp() {
   const [paused, setPaused] = useState(false);
   const [treasury, setTreasury] = useState("");
   const [newTreasury, setNewTreasury] = useState("");
-  const [sfDistributeCycle, setSfDistributeCycle] = useState("");
   const [sfDistributeRecipients, setSfDistributeRecipients] = useState("");
   const [rescueTokenAddr, setRescueTokenAddr] = useState("");
   const [rescueTo, setRescueTo] = useState("");
   const [rescueAmount, setRescueAmount] = useState("");
+  const [rescueableAmt, setRescueableAmt] = useState<bigint | null>(null);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -323,30 +323,11 @@ export default function FalconApp() {
   }, [account]);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    // Prefer env/default when localStorage still has a previous deploy address.
-    const legacy = new Set([
-      "0xb573d4159956e798e8f8c228481de1cbab135f72",
-      "0x9ddb41afa46d87a2988b4e057f59a4234a62c0a6",
-      "0xd1692deb1670d286376ccab9f0a3662d72106941",
-      "0xbc9e7f1413989ea5dca5ac27dd499bab742696fe",
-      // previous FalconCapital deploys — force migrate to current env/default
-      "0xc5b92cf8cd14e8160ba97cac1bb5e16826b17378",
-      "0xae5c77d92367f4ce78288acf2929d85a95c0d5b5",
-      "0xc296849f29197a6d92949240fc503001eeea4d80",
-      "0xff94b6c9103d157315d74072697622cfe79653a1",
-      "0x56f312870f453bc0863c2949993ea664c0ba1cd7",
-      "0x27aeb6069f5b504caf6bdc603fac5560a50b9c47",
-    ]);
+    // Always use the single current contract from env/default — no legacy list.
     const preferred = DEFAULT_CONTRACT_ADDRESS;
-    if (saved && isAddress(saved) && !legacy.has(saved.toLowerCase())) {
-      setContractAddr(saved);
-      setContractInput(saved);
-    } else {
-      localStorage.setItem(STORAGE_KEY, preferred);
-      setContractAddr(preferred);
-      setContractInput(preferred);
-    }
+    localStorage.setItem(STORAGE_KEY, preferred);
+    setContractAddr(preferred);
+    setContractInput(preferred);
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
     if (ref && isAddress(ref)) {
@@ -478,7 +459,7 @@ export default function FalconApp() {
       setPaymentToken(tokenAddr);
       const token = new Contract(tokenAddr, ERC20_ABI, provider);
 
-      const [sym, onchainDec, users, pkgResults, thresholdResults, bal, cycle, next, deployed, targetPct, statsRaw] =
+      const [sym, onchainDec, users, pkgResults, thresholdResults, bal, epoch, next, deployed, targetPct, statsRaw] =
         await Promise.all([
           token.symbol().catch(() => "USDC"),
           c.paymentDecimals().catch(() => token.decimals().catch(() => 18)),
@@ -490,18 +471,12 @@ export default function FalconApp() {
             ),
           ),
           c.secureFundBalance().catch(() => 0n),
-          c.secureFundCycle().catch(() => 0n),
+          c.currentSecureFundEpoch().catch(() => 0n),
           c.nextSecureFundAvailableAt().catch(() => 0n),
           c.deployedAt().catch(() => 0n),
           c.secureFundTargetPercent().catch(() => 120),
           c.getAdminStats().catch(() => null),
         ]);
-
-      const cycleNum = Number(cycle);
-      const cyclePool =
-        cycleNum > 0
-          ? BigInt(await c.secureFundCyclePool(cycleNum).catch(() => 0n))
-          : 0n;
 
       setTokenSymbol(String(sym));
       setTokenDecimals(Number(onchainDec));
@@ -568,11 +543,10 @@ export default function FalconApp() {
       const pct = Number(targetPct);
       setSf({
         balance: BigInt(bal),
-        cycle: cycleNum,
+        epoch: Number(epoch),
         next: Number(next),
         deployed: Number(deployed),
         targetPercent: pct,
-        cyclePool,
       });
       setSfTargetInput(String(pct));
     } catch {
@@ -655,7 +629,7 @@ export default function FalconApp() {
       const tokenAddr = paymentToken || DEFAULT_PAYMENT_TOKEN;
       const token = new Contract(tokenAddr, ERC20_ABI, provider);
 
-      const [u, pools, secureElig, bal, allow, owner, pausedVal, treasuryVal, matrixInfos, payoutDue, targetAmt, sfCycle] =
+      const [u, pools, secureElig, bal, allow, owner, pausedVal, treasuryVal, matrixInfos, payoutDue, targetAmt, claimable, lastEpoch, epoch] =
         await Promise.all([
           c.users(account),
           c.getIncomeTotals(account).catch(() => null),
@@ -668,17 +642,16 @@ export default function FalconApp() {
           Promise.all([1, 2, 3, 4, 5].map((id) => c.matrices(account, id).catch(() => null))),
           c.secureFundPayoutDue(account).catch(() => 0n),
           c.secureFundTargetAmount(account).catch(() => 0n),
-          c.secureFundCycle().catch(() => 0n),
+          c.secureFundClaimable(account).catch(() => 0n),
+          c.secureFundLastClaimedEpoch(account).catch(() => 0n),
+          c.currentSecureFundEpoch().catch(() => 0n),
         ]);
 
-      const cycleNum = Number(sfCycle);
-      const claimed =
-        cycleNum > 0
-          ? Boolean(await c.secureFundClaimed(cycleNum, account).catch(() => false))
-          : false;
       setSfPayoutDue(BigInt(payoutDue));
+      setSfClaimable(BigInt(claimable));
       setSfTargetAmount(BigInt(targetAmt));
-      setSfClaimed(claimed);
+      setSfLastClaimedEpoch(Number(lastEpoch));
+      setSf((prev) => ({ ...prev, epoch: Number(epoch) }));
 
       const reg = Boolean(u.registered ?? u[0]);
       setRegistered(reg);
@@ -1632,13 +1605,25 @@ export default function FalconApp() {
     });
   }
 
-  async function onFinalizeSf() {
-    await runTx("Finalize Secure Fund", async () => {
+  async function onDistributeSf() {
+    const recipients = sfDistributeRecipients
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (recipients.length === 0) {
+      showToast("At least one recipient required", "error");
+      return;
+    }
+    if (!recipients.every((a) => isAddress(a))) {
+      showToast("Invalid recipient address", "error");
+      return;
+    }
+    await runTx("Distribute Secure Fund", async () => {
       const { contract, provider } = await getSignerContract();
       const gas = await lowGasOverrides(provider, () =>
-        contract.finalizeSecureFundCycle.estimateGas(),
+        contract.distributeSecureFund.estimateGas(recipients),
       );
-      const tx = await contract.finalizeSecureFundCycle(gas);
+      const tx = await contract.distributeSecureFund(recipients, gas);
       await tx.wait();
     });
   }
@@ -1654,30 +1639,6 @@ export default function FalconApp() {
         contract.setTreasury.estimateGas(newTreasury),
       );
       const tx = await contract.setTreasury(newTreasury, gas);
-      await tx.wait();
-    });
-  }
-
-  async function onDistributeSf() {
-    const cycle = Number(sfDistributeCycle || sf.cycle);
-    const recipients = sfDistributeRecipients
-      .split(/[\n,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (!cycle || recipients.length === 0) {
-      showToast("Cycle + at least one recipient required", "error");
-      return;
-    }
-    if (!recipients.every((a) => isAddress(a))) {
-      showToast("Invalid recipient address", "error");
-      return;
-    }
-    await runTx("Distribute Secure Fund", async () => {
-      const { contract, provider } = await getSignerContract();
-      const gas = await lowGasOverrides(provider, () =>
-        contract.distributeSecureFund.estimateGas(cycle, recipients),
-      );
-      const tx = await contract.distributeSecureFund(cycle, recipients, gas);
       await tx.wait();
     });
   }
@@ -1699,19 +1660,33 @@ export default function FalconApp() {
   }
 
   async function onClaimSecureFund() {
-    const cycle = sf.cycle;
-    if (!cycle) {
-      showToast("No secure fund cycle yet", "error");
+    if (sfClaimable === 0n) {
+      showToast("Nothing claimable yet", "error");
       return;
     }
     await runTx("Claim Secure Fund", async () => {
       const { contract, provider } = await getSignerContract();
       const gas = await lowGasOverrides(provider, () =>
-        contract.claimSecureFund.estimateGas(cycle),
+        contract.claimSecureFund.estimateGas(),
       );
-      const tx = await contract.claimSecureFund(cycle, gas);
+      const tx = await contract.claimSecureFund(gas);
       await tx.wait();
     });
+  }
+
+  async function onCheckRescueable() {
+    if (!isAddress(rescueTokenAddr)) {
+      showToast("Invalid token address", "error");
+      return;
+    }
+    try {
+      const c = await getReadContract();
+      const amt = await c.rescueableAmount(rescueTokenAddr);
+      setRescueableAmt(BigInt(amt));
+    } catch {
+      setRescueableAmt(null);
+      showToast("Could not read rescueable amount", "error");
+    }
   }
 
   async function onRescueToken() {
@@ -2792,12 +2767,8 @@ export default function FalconApp() {
                 <div className="stat-value !text-left">{fmtUsd(sf.balance, tokenDecimals)}</div>
               </div>
               <div>
-                <div className="stat-label !text-left">Cycle</div>
-                <div className="stat-value !text-left">{sf.cycle || "—"}</div>
-              </div>
-              <div>
-                <div className="stat-label !text-left">Cycle Pool</div>
-                <div className="stat-value !text-left">{fmtUsd(sf.cyclePool, tokenDecimals)}</div>
+                <div className="stat-label !text-left">Epoch</div>
+                <div className="stat-value !text-left">{sf.epoch || "—"}</div>
               </div>
               <div>
                 <div className="stat-label !text-left">Target %</div>
@@ -2824,15 +2795,25 @@ export default function FalconApp() {
               <span className={`badge${secureEligible ? " badge-success" : ""}`}>
                 {account ? (secureEligible ? "Eligible" : "Not eligible") : "—"}
               </span>
-              {sf.cycle > 0 && (
-                <span className={`badge${sfClaimed ? "" : " badge-success"}`} style={{ marginLeft: "0.4rem" }}>
-                  {sfClaimed ? "Claimed this cycle" : "Claim open"}
+              {sfClaimable > 0n ? (
+                <span className="badge badge-success" style={{ marginLeft: "0.4rem" }}>
+                  Claimable
                 </span>
-              )}
+              ) : sfLastClaimedEpoch > 0 ? (
+                <span className="badge" style={{ marginLeft: "0.4rem" }}>
+                  Last claimed epoch {sfLastClaimedEpoch}
+                </span>
+              ) : null}
             </p>
             <div className="stat-label !text-left">Your Secure Income</div>
             <div className="stat-value !text-left">{fmtUsd(incomePools.secure, tokenDecimals)}</div>
             <div className="grid-two" style={{ marginTop: "0.85rem" }}>
+              <div>
+                <div className="stat-label !text-left">Claimable Now</div>
+                <div className="stat-value !text-left" style={{ fontSize: "1.15rem" }}>
+                  {fmtUsd(sfClaimable, tokenDecimals)}
+                </div>
+              </div>
               <div>
                 <div className="stat-label !text-left">Payout Due</div>
                 <div className="stat-value !text-left" style={{ fontSize: "1.15rem" }}>
@@ -2845,19 +2826,26 @@ export default function FalconApp() {
                   {fmtUsd(sfTargetAmount, tokenDecimals)}
                 </div>
               </div>
+              <div>
+                <div className="stat-label !text-left">Last Claimed Epoch</div>
+                <div className="stat-value !text-left" style={{ fontSize: "1.15rem" }}>
+                  {sfLastClaimedEpoch || "—"}
+                </div>
+              </div>
             </div>
             <button
               className="btn btn-primary"
               type="button"
               style={{ marginTop: "1rem" }}
-              disabled={!account || busy || !secureEligible || !sf.cycle || sfClaimed || sfPayoutDue === 0n}
+              disabled={!account || busy || !secureEligible || sfClaimable === 0n}
               onClick={() => void onClaimSecureFund()}
             >
-              Claim Secure Fund (Cycle {sf.cycle || "—"})
+              Claim Secure Fund
+              {sfClaimable > 0n ? ` · ${fmtUsd(sfClaimable, tokenDecimals)}` : ""}
             </button>
             <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: "1rem" }}>
-              Silver+ packages contribute to Secure Fund. Eligible under-earners can claim after the
-              owner finalizes a cycle.
+              Silver+ packages contribute to Secure Fund. Eligible under-earners can claim when
+              an epoch has claimable balance.
             </p>
               </>
             )}
@@ -2868,8 +2856,8 @@ export default function FalconApp() {
           <ol className="text-muted" style={{ fontSize: "0.9rem", lineHeight: 1.7, margin: 0, paddingLeft: "1.2rem" }}>
             <li>Starter has no Secure Fund cut — starts from Silver.</li>
             <li>Pool accumulates in the contract (target {sf.targetPercent}% of invested).</li>
-            <li>Owner finalizes a cycle when the period is ready.</li>
-            <li>Eligible users claim their payout — shown in income history.</li>
+            <li>Owner distributes to eligible recipients; epochs track claim windows.</li>
+            <li>Eligible users claim with one click when claimable balance is ready.</li>
           </ol>
         </div>
       </section>
@@ -2983,7 +2971,7 @@ export default function FalconApp() {
           <div className="card">
             <h2 className="card-title">Secure Fund Settings</h2>
             <p className="text-muted" style={{ fontSize: "0.82rem", margin: "0 0 0.85rem" }}>
-              Cycle {sf.cycle || "—"} · Pool {fmtUsd(sf.cyclePool, tokenDecimals)} · Next{" "}
+              Epoch {sf.epoch || "—"} · Pool {fmtUsd(sf.balance, tokenDecimals)} · Next{" "}
               {fmtTime(sf.next)}
             </p>
             <div className="field" style={{ maxWidth: 220 }}>
@@ -3004,14 +2992,6 @@ export default function FalconApp() {
               >
                 Update Target %
               </button>
-              <button
-                className="btn btn-primary"
-                type="button"
-                disabled={busy}
-                onClick={() => void onFinalizeSf()}
-              >
-                Finalize Cycle
-              </button>
             </div>
           </div>
         </div>
@@ -3019,16 +2999,8 @@ export default function FalconApp() {
         <div className="card" style={{ marginBottom: "1rem" }}>
           <h2 className="card-title">Distribute Secure Fund</h2>
           <p className="text-muted" style={{ fontSize: "0.82rem" }}>
-            New ABI: pass cycle + recipient addresses only. Payout amounts are computed on-chain.
+            Pass recipient addresses only. Payout amounts are computed on-chain for the current epoch.
           </p>
-          <div className="field" style={{ marginTop: "0.75rem", maxWidth: 280 }}>
-            <label className="label">Cycle</label>
-            <input
-              className="input"
-              value={sfDistributeCycle || String(sf.cycle || "")}
-              onChange={(e) => setSfDistributeCycle(e.target.value.trim())}
-            />
-          </div>
           <div className="field" style={{ marginTop: "0.75rem" }}>
             <label className="label">Recipients (comma or newline)</label>
             <textarea
@@ -3062,7 +3034,10 @@ export default function FalconApp() {
               <input
                 className="input"
                 value={rescueTokenAddr}
-                onChange={(e) => setRescueTokenAddr(e.target.value.trim())}
+                onChange={(e) => {
+                  setRescueTokenAddr(e.target.value.trim());
+                  setRescueableAmt(null);
+                }}
                 placeholder="0x token…"
                 spellCheck={false}
               />
@@ -3077,6 +3052,21 @@ export default function FalconApp() {
                 spellCheck={false}
               />
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2" style={{ marginTop: "0.5rem" }}>
+            <button
+              className="btn btn-ghost"
+              type="button"
+              disabled={busy || !rescueTokenAddr}
+              onClick={() => void onCheckRescueable()}
+            >
+              Check Rescueable
+            </button>
+            {rescueableAmt !== null && (
+              <span className="text-muted" style={{ fontSize: "0.85rem" }}>
+                Rescueable: {fmtUsd(rescueableAmt, tokenDecimals)}
+              </span>
+            )}
           </div>
           <div className="field" style={{ marginTop: "0.75rem", maxWidth: 280 }}>
             <label className="label">Amount ({tokenSymbol})</label>
