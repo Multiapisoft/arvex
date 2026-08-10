@@ -752,6 +752,7 @@ export default function FalconApp() {
           invested: bigint;
           earned: bigint;
           joinedAt: number;
+          lastPackageAt: number;
           active: boolean;
           childCount: number;
           downline: string;
