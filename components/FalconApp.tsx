@@ -303,6 +303,7 @@ export default function FalconApp() {
   const [sfPayoutDue, setSfPayoutDue] = useState(0n);
   const [sfClaimable, setSfClaimable] = useState(0n);
   const [sfTargetAmount, setSfTargetAmount] = useState(0n);
+  const [sfInvestedBasis, setSfInvestedBasis] = useState(0n);
   const [sfLastClaimedEpoch, setSfLastClaimedEpoch] = useState(0);
   const [sfTargetInput, setSfTargetInput] = useState("120");
 
@@ -638,7 +639,7 @@ export default function FalconApp() {
       const tokenAddr = paymentToken || DEFAULT_PAYMENT_TOKEN;
       const token = new Contract(tokenAddr, ERC20_ABI, provider);
 
-      const [u, pools, secureElig, bal, allow, owner, pausedVal, treasuryVal, matrixInfos, payoutDue, targetAmt, claimable, lastEpoch, epoch] =
+      const [u, pools, secureElig, bal, allow, owner, pausedVal, treasuryVal, matrixInfos, payoutDue, targetAmt, claimable, lastEpoch, epoch, investedBasis] =
         await Promise.all([
           c.users(account),
           c.getIncomeTotals(account).catch(() => null),
@@ -654,11 +655,13 @@ export default function FalconApp() {
           c.secureFundClaimable(account).catch(() => 0n),
           c.secureFundLastClaimedEpoch(account).catch(() => 0n),
           c.currentSecureFundEpoch().catch(() => 0n),
+          c.secureFundInvestedBasis(account).catch(() => 0n),
         ]);
 
       setSfPayoutDue(BigInt(payoutDue));
       setSfClaimable(BigInt(claimable));
       setSfTargetAmount(BigInt(targetAmt));
+      setSfInvestedBasis(BigInt(investedBasis));
       setSfLastClaimedEpoch(Number(lastEpoch));
       setSf((prev) => ({ ...prev, epoch: Number(epoch) }));
 
@@ -1905,6 +1908,7 @@ export default function FalconApp() {
             "—"
           )}
         </span>
+        <span className="badge badge-success">BSC Testnet · Live</span>
       </div>
 
       <details className="card mb-4">
@@ -1917,10 +1921,26 @@ export default function FalconApp() {
               value={contractInput}
               onChange={(e) => setContractInput(e.target.value.trim())}
               spellCheck={false}
+              placeholder={DEFAULT_CONTRACT_ADDRESS}
             />
+            <p className="text-muted" style={{ fontSize: "0.78rem", margin: "0.45rem 0 0" }}>
+              Default: {DEFAULT_CONTRACT_ADDRESS}
+            </p>
           </div>
           <button className="btn btn-ghost" type="button" onClick={saveContract}>
             Reload Contract
+          </button>
+          <button
+            className="btn btn-ghost"
+            type="button"
+            onClick={() => {
+              setContractInput(DEFAULT_CONTRACT_ADDRESS);
+              localStorage.setItem(STORAGE_KEY, DEFAULT_CONTRACT_ADDRESS);
+              setContractAddr(DEFAULT_CONTRACT_ADDRESS);
+              showToast("Reset to default contract", "success");
+            }}
+          >
+            Use Default
           </button>
         </div>
       </details>
@@ -2907,6 +2927,12 @@ export default function FalconApp() {
                 </div>
               </div>
               <div>
+                <div className="stat-label !text-left">Invested Basis</div>
+                <div className="stat-value !text-left" style={{ fontSize: "1.15rem" }}>
+                  {fmtUsd(sfInvestedBasis, tokenDecimals)}
+                </div>
+              </div>
+              <div>
                 <div className="stat-label !text-left">Last Claimed Epoch</div>
                 <div className="stat-value !text-left" style={{ fontSize: "1.15rem" }}>
                   {sfLastClaimedEpoch || "—"}
@@ -2935,7 +2961,7 @@ export default function FalconApp() {
           <h2 className="card-title">How Secure Fund Works</h2>
           <ol className="text-muted" style={{ fontSize: "0.9rem", lineHeight: 1.7, margin: 0, paddingLeft: "1.2rem" }}>
             <li>Starter has no Secure Fund cut — starts from Silver.</li>
-            <li>Pool accumulates in the contract (target {sf.targetPercent}% of invested).</li>
+            <li>Pool accumulates in the contract (target {sf.targetPercent}% of invested basis).</li>
             <li>Owner distributes to eligible recipients; epochs track claim windows.</li>
             <li>Eligible users claim with one click when claimable balance is ready.</li>
           </ol>
