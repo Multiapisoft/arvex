@@ -41,7 +41,7 @@ export const EXPLORER_BASE = "https://testnet.bscscan.com";
 /** Override via NEXT_PUBLIC_CONTRACT_ADDRESS or Advanced UI. */
 export const DEFAULT_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
-  "0xB530202AeEb5Bb92c7523578E2d48a7DeAbdcD86";
+  "0xb9BFEDCc8c867c4843Cf3aCA1a4F0cda82EFa9cB";
 
 /** Default USDC (payment token) on BSC Testnet. */
 export const DEFAULT_PAYMENT_TOKEN =

@@ -1951,6 +1951,16 @@
         "internalType": "uint256",
         "name": "registeredAt",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lastPackageAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalWithdrawn",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",

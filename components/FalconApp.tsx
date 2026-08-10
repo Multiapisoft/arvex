@@ -182,6 +182,8 @@ export default function FalconApp() {
   const [earned, setEarned] = useState<bigint>(0n);
   const [withdrawable, setWithdrawable] = useState<bigint>(0n);
   const [joinedAt, setJoinedAt] = useState(0);
+  const [lastPackageAt, setLastPackageAt] = useState(0);
+  const [userTotalWithdrawn, setUserTotalWithdrawn] = useState(0n);
   const [balance, setBalance] = useState<bigint>(0n);
   const [allowance, setAllowance] = useState<bigint>(0n);
   const [incomePools, setIncomePools] = useState({
@@ -239,6 +241,7 @@ export default function FalconApp() {
       invested: bigint;
       earned: bigint;
       joinedAt: number;
+      lastPackageAt: number;
     }[]
   >([]);
   const [downlinePkg, setDownlinePkg] = useState(1);
@@ -255,6 +258,7 @@ export default function FalconApp() {
       invested: bigint;
       earned: bigint;
       joinedAt: number;
+      lastPackageAt: number;
       active: boolean;
       childCount: number;
       downline: string;
@@ -574,6 +578,7 @@ export default function FalconApp() {
         invested: bigint;
         earned: bigint;
         joinedAt: number;
+        lastPackageAt: number;
       }[] = [];
       const CHUNK = 40;
       const me = account.toLowerCase();
@@ -604,6 +609,7 @@ export default function FalconApp() {
             invested: BigInt(row.tu.totalInvested ?? row.tu[3] ?? 0),
             earned: BigInt(row.tu.totalEarned ?? row.tu[4] ?? 0),
             joinedAt: Number(row.tu.registeredAt ?? row.tu[6] ?? 0),
+            lastPackageAt: Number(row.tu.lastPackageAt ?? row.tu[7] ?? 0),
           });
         }
       }
@@ -676,6 +682,8 @@ export default function FalconApp() {
       setEarned(BigInt(u.totalEarned ?? u[4] ?? 0));
       setWithdrawable(BigInt(u.withdrawable ?? u[5] ?? 0));
       setJoinedAt(Number(u.registeredAt ?? u[6] ?? 0));
+      setLastPackageAt(Number(u.lastPackageAt ?? u[7] ?? 0));
+      setUserTotalWithdrawn(BigInt(u.totalWithdrawn ?? u[8] ?? 0));
 
       if (pools) {
         setIncomePools({
@@ -798,6 +806,7 @@ export default function FalconApp() {
                   invested: BigInt(tu.totalInvested ?? tu[3] ?? 0),
                   earned: BigInt(tu.totalEarned ?? tu[4] ?? 0),
                   joinedAt: Number(tu.registeredAt ?? tu[6] ?? 0),
+                  lastPackageAt: Number(tu.lastPackageAt ?? tu[7] ?? 0),
                   active: Boolean(info.active ?? info[0]),
                   childCount: Number(info.childCount ?? info[2] ?? 0),
                   downline: String(info.downlineCount ?? info[3] ?? 0),
@@ -810,6 +819,7 @@ export default function FalconApp() {
                   invested: 0n,
                   earned: 0n,
                   joinedAt: 0,
+                  lastPackageAt: 0,
                   active: false,
                   childCount: 0,
                   downline: "0",
@@ -1959,9 +1969,11 @@ export default function FalconApp() {
               ["Total Investment", fmtUsd(invested, tokenDecimals)],
               ["Total Earned", fmtUsd(earned, tokenDecimals)],
               ["Withdrawable", fmtUsd(withdrawable, tokenDecimals)],
+              ["Withdrawn", fmtUsd(userTotalWithdrawn, tokenDecimals)],
               ["Wallet Balance", `${fmtToken(balance, tokenDecimals)} ${tokenSymbol}`],
               ["Token Allowance", `${fmtToken(allowance, tokenDecimals)} ${tokenSymbol}`],
               ["Joined", fmtTime(joinedAt)],
+              ["Last Package", fmtTime(lastPackageAt)],
             ] as const
           ).map(([label, value], i) => (
             <div className="card" key={label}>
@@ -2012,6 +2024,10 @@ export default function FalconApp() {
                         ? "Max reached"
                         : "—"}
                   </strong>
+                </div>
+                <div className="dash-upgrade-meta-item">
+                  <span>Last buy / upgrade</span>
+                  <strong>{fmtTime(lastPackageAt)}</strong>
                 </div>
               </div>
               <div className="dash-upgrade-btns">
@@ -2437,18 +2453,19 @@ export default function FalconApp() {
                   <th>Invested</th>
                   <th>Earned</th>
                   <th>Joined</th>
+                  <th>Last Package</th>
                 </tr>
               </thead>
               <tbody>
                 {downlineLoading ? (
                   <tr>
-                    <td colSpan={10}>
+                    <td colSpan={11}>
                       <DataLoading label="Loading matrix downline…" />
                     </td>
                   </tr>
                 ) : downlineMembers.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="text-muted">
+                    <td colSpan={11} className="text-muted">
                       No downline members yet
                     </td>
                   </tr>
@@ -2469,6 +2486,7 @@ export default function FalconApp() {
                       <td>{fmtUsd(d.invested, tokenDecimals)}</td>
                       <td>{fmtUsd(d.earned, tokenDecimals)}</td>
                       <td className="team-col-joined">{fmtTime(d.joinedAt)}</td>
+                      <td className="team-col-joined">{fmtTime(d.lastPackageAt)}</td>
                     </tr>
                   ))
                 )}
@@ -2514,18 +2532,19 @@ export default function FalconApp() {
                   <th>Invested</th>
                   <th>Earned</th>
                   <th>Joined</th>
+                  <th>Last Package</th>
                 </tr>
               </thead>
               <tbody>
                 {directsLoading || userLoading || busy ? (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       <DataLoading label="Scanning direct referrals…" />
                     </td>
                   </tr>
                 ) : directs.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-muted">
+                    <td colSpan={6} className="text-muted">
                       —
                     </td>
                   </tr>
@@ -2537,6 +2556,7 @@ export default function FalconApp() {
                       <td>{fmtUsd(d.invested, tokenDecimals)}</td>
                       <td>{fmtUsd(d.earned, tokenDecimals)}</td>
                       <td className="team-col-joined">{fmtTime(d.joinedAt)}</td>
+                      <td className="team-col-joined">{fmtTime(d.lastPackageAt)}</td>
                     </tr>
                   ))
                 )}
