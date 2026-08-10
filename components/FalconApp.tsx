@@ -21,6 +21,7 @@ import {
   Shield,
   ShieldCheck,
   Users,
+  Wallet,
 } from "lucide-react";
 import {
   BSC_TESTNET_CHAIN_ID,
@@ -55,6 +56,7 @@ type TabId =
   | "team"
   | "packages"
   | "secure"
+  | "withdraw"
   | "admin";
 
 type IncomeRow = {
@@ -75,6 +77,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "team", label: "My Team", icon: Users },
   { id: "packages", label: "Packages", icon: Package },
   { id: "secure", label: "Secure Fund", icon: Shield },
+  { id: "withdraw", label: "Withdrawal", icon: Wallet },
 ];
 
 const ADMIN_TAB: { id: TabId; label: string; icon: typeof LayoutDashboard } = {
@@ -2081,10 +2084,9 @@ export default function FalconApp() {
             <button
               className="btn btn-primary"
               type="button"
-              disabled={!account || withdrawable === 0n || busy}
-              onClick={() => void onWithdraw()}
+              onClick={() => setTab("withdraw")}
             >
-              Withdraw Earnings
+              Go to Withdrawal
             </button>
           </div>
         </div>
@@ -2766,6 +2768,63 @@ export default function FalconApp() {
               : "R1=27 · R2=243 · R3=2187 · R4=19683"}{" "}
             downline. Each qualified rank gets its share from the Rank pool.
           </p>
+        </div>
+      </section>
+      )}
+
+      {/* Withdrawal */}
+      {tab === "withdraw" && (
+      <section>
+        {(userLoading || busy) && (
+          <div className="loading-bar mb-3" />
+        )}
+        <div className="card" style={{ marginBottom: "1rem" }}>
+          <h2 className="card-title">Withdrawal</h2>
+          {userLoading || busy ? (
+            <DataLoading label="Loading withdrawable balance…" />
+          ) : (
+            <>
+              <div style={{ marginBottom: "1.25rem" }}>
+                <div className="stat-label !text-left">Total Withdrawable Amount</div>
+                <div className="stat-value !text-left text-gradient-gold" style={{ fontSize: "1.85rem" }}>
+                  {fmtUsd(withdrawable, tokenDecimals)}
+                </div>
+              </div>
+              <div className="grid-stats" style={{ marginBottom: "1.25rem" }}>
+                <div>
+                  <div className="stat-label !text-left">Total Withdrawn</div>
+                  <div className="stat-value !text-left">
+                    {fmtUsd(userTotalWithdrawn, tokenDecimals)}
+                  </div>
+                </div>
+                <div>
+                  <div className="stat-label !text-left">Total Earned</div>
+                  <div className="stat-value !text-left">
+                    {fmtUsd(earned, tokenDecimals)}
+                  </div>
+                </div>
+                <div>
+                  <div className="stat-label !text-left">Wallet Balance</div>
+                  <div className="stat-value !text-left">
+                    {fmtToken(balance, tokenDecimals)} {tokenSymbol}
+                  </div>
+                </div>
+              </div>
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={!account || withdrawable === 0n || busy}
+                onClick={() => void onWithdraw()}
+              >
+                Withdraw
+                {withdrawable > 0n ? ` · ${fmtUsd(withdrawable, tokenDecimals)}` : ""}
+              </button>
+              <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: "1rem" }}>
+                Withdraw available earnings to your connected wallet in one click.
+                {withdrawable === 0n ? " No withdrawable balance right now." : ""}
+              </p>
+            </>
+          )}
         </div>
       </section>
       )}
