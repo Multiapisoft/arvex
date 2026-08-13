@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Falcone Capital — BSC Mainnet",
+  title: "Falcon Capital — BSC Mainnet",
   description:
-    "Falcone Capital dApp — packages, matrix autopool, secure fund, and admin panel.",
+    "Falcon Capital dApp — packages, matrix autopool, secure fund, and admin panel.",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

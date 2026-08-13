@@ -1988,7 +1988,6 @@ export default function FalconApp() {
               ["Total Earned", fmtUsd(earned, tokenDecimals)],
               ["Withdrawable", fmtUsd(withdrawable, tokenDecimals)],
               ["Withdrawn", fmtUsd(userTotalWithdrawn, tokenDecimals)],
-              ["Wallet Balance", `${fmtToken(balance, tokenDecimals)} ${tokenSymbol}`],
               ["Token Allowance", `${fmtToken(allowance, tokenDecimals)} ${tokenSymbol}`],
               ["Joined", fmtTime(joinedAt)],
               ["Last Package", fmtTime(lastPackageAt)],

@@ -76,7 +76,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
             <div className="wallet-auth-logo">
               <Image
                 src="/logo.png"
-                alt="Falcone Capital"
+                alt="Falcon Capital"
                 width={88}
                 height={88}
                 priority
@@ -86,7 +86,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
           </div>
 
           <h1 className="wallet-auth-title">
-            <span className="text-solar-400">FALCONE</span> CAPITAL
+            <span className="text-solar-400">FALCON</span> CAPITAL
           </h1>
           <p className="wallet-auth-sub">Packages · Matrix · Secure Fund · CTO Reward</p>
           <p className="wallet-auth-desc">

@@ -43,7 +43,7 @@ export function AppShell({
       <span className="logo-ripple">
         <Image
           src="/logo.png"
-          alt="Falcone Capital"
+          alt="Falcon Capital"
           width={40}
           height={40}
           priority
@@ -52,7 +52,7 @@ export function AppShell({
       </span>
       <span className="flex flex-col leading-none">
         <span className="text-base font-bold tracking-brand">
-          <span className="text-solar-400">FALCONE</span> CAPITAL
+          <span className="text-solar-400">FALCON</span> CAPITAL
         </span>
         <span className="mt-1 text-2xs tracking-label text-muted">{subtitle}</span>
       </span>
@@ -119,7 +119,7 @@ export function AppShell({
               </span>
               <Image
                 src="/logo.png"
-                alt="Falcone Capital"
+                alt="Falcon Capital"
                 width={40}
                 height={40}
                 className="topbar-logo-img rounded-full"
