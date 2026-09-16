@@ -125,7 +125,7 @@ export default function AdminDashboardPage() {
           </span>
           <span className="flex flex-col leading-none">
             <span className="text-base font-bold tracking-brand">
-              <span className="text-leaf-400">FALCON</span> ADMIN
+              <span className="text-solar-400">MULTI</span> CORE
             </span>
             <span className="mt-1 text-2xs tracking-label text-muted">User management</span>
           </span>

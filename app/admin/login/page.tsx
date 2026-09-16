@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
           <span className="logo-ripple">
             <Image
               src="/logo.png"
-              alt="Falcon Capital"
+              alt="Multi Core"
               width={48}
               height={48}
               className="rounded-full"
@@ -58,7 +58,7 @@ export default function AdminLoginPage() {
             <h1 className="text-xl font-bold">
               <span className="text-gradient-gold">Admin Login</span>
             </h1>
-            <p className="text-2xs tracking-label text-muted">Falcon Capital · secure panel</p>
+            <p className="text-2xs tracking-label text-muted">Multi Core · secure panel</p>
           </div>
         </div>
 
@@ -74,8 +74,9 @@ export default function AdminLoginPage() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@falconcapital.live"
+              placeholder="admin@multicore.live"
               required
+              suppressHydrationWarning
             />
             {errors.email?.[0] && <span className="error-text">{errors.email[0]}</span>}
           </div>
@@ -92,6 +93,7 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
+              suppressHydrationWarning
             />
             {errors.password?.[0] && <span className="error-text">{errors.password[0]}</span>}
           </div>

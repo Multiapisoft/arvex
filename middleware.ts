@@ -5,7 +5,7 @@ import { jwtVerify } from "jose";
 const COOKIE_NAME = "fc_admin_session";
 
 function getSecret() {
-  const secret = process.env.ADMIN_JWT_SECRET || "falcon-capital-dev-secret-change-me";
+  const secret = process.env.ADMIN_JWT_SECRET || "multicore-dev-secret-change-me";
   return new TextEncoder().encode(secret);
 }
 

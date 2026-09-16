@@ -27,7 +27,7 @@ type AppShellProps = {
 
 export function AppShell({
   title,
-  subtitle = "BSC Mainnet · USDT · Building Value, Securing Futures",
+  subtitle = "BSC Testnet · USDC · Together We Help, Together We Grow",
   navItems,
   primaryNavItems,
   activeId,
@@ -43,7 +43,7 @@ export function AppShell({
       <span className="logo-ripple">
         <Image
           src="/logo.png"
-          alt="Falcon Capital"
+          alt="Multi Core"
           width={40}
           height={40}
           priority
@@ -52,7 +52,7 @@ export function AppShell({
       </span>
       <span className="flex flex-col leading-none">
         <span className="text-base font-bold tracking-brand">
-          <span className="text-solar-400">FALCON</span> CAPITAL
+          <span className="text-solar-400">MULTI</span> CORE
         </span>
         <span className="mt-1 text-2xs tracking-label text-muted">{subtitle}</span>
       </span>
@@ -97,7 +97,7 @@ export function AppShell({
       <aside className="sidebar hidden md:flex">
         {brand}
         <div className="mt-6 flex-1 overflow-y-auto">{nav}</div>
-        <p className="mt-4 px-1.5 text-2xs text-muted-foreground">BNB Mainnet · chainId 56 · USDT</p>
+        <p className="mt-4 px-1.5 text-2xs text-muted-foreground">BNB Testnet · chainId 97 · USDC</p>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -119,7 +119,7 @@ export function AppShell({
               </span>
               <Image
                 src="/logo.png"
-                alt="Falcon Capital"
+                alt="Multi Core"
                 width={40}
                 height={40}
                 className="topbar-logo-img rounded-full"

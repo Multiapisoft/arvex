@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Falcon Capital — BSC Mainnet",
+  title: "Multi Core Helping Plan — BSC Testnet",
   description:
-    "Falcon Capital dApp — packages, matrix autopool, secure fund, and admin panel.",
+    "Multi Core Helping Plan — $5 one-time join, global 4×6 matrix, directs, virtual IDs, and monthly royalty.",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

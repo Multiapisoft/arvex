@@ -1,5 +1,5 @@
 import { formatUnits, isAddress } from "ethers";
-import { PACKAGE_NAMES } from "./contract";
+import { INCOME_TYPES } from "./contract";
 
 export function shortAddr(addr?: string | null, size = 4) {
   if (!addr) return "—";
@@ -27,9 +27,8 @@ export function fmtUsd(value: bigint | number | string | undefined, decimals = 1
   return s === "—" ? s : `$${s}`;
 }
 
-export function pkgName(id: number | bigint | string) {
-  const n = Number(id);
-  return PACKAGE_NAMES[n] || `Pkg ${n}`;
+export function incomeKind(id: number | bigint | string) {
+  return INCOME_TYPES[Number(id)] || `Type ${id}`;
 }
 
 export function fmtTime(ts: number | bigint | string) {

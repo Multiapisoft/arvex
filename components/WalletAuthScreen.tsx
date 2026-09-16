@@ -3,13 +3,14 @@
 import Image from "next/image";
 import {
   ArrowUpRight,
-  Layers,
+  GitBranch,
+  HeartHandshake,
   Loader2,
-  ShieldCheck,
   Trophy,
   Users,
   Wallet,
 } from "lucide-react";
+import { APP_NAME_FULL, APP_TAGLINE, JOIN_USD, PAYMENT_TOKEN_SYMBOL } from "@/lib/contract";
 
 type LoginProps = {
   mode: "login";
@@ -28,7 +29,6 @@ type RegisterProps = {
   sponsorInput: string;
   onSponsorChange: (value: string) => void;
   onRegisterBuy: () => void;
-  onRegisterOnly: () => void;
   onDisconnect: () => void;
   busy?: boolean;
 };
@@ -37,24 +37,24 @@ export type WalletAuthScreenProps = LoginProps | CheckingProps | RegisterProps;
 
 const FEATURES = [
   {
-    icon: Layers,
-    title: "Packages",
-    text: "Starter → Crown sequential upgrades on-chain.",
+    icon: HeartHandshake,
+    title: "One-time $5 help",
+    text: "Join once with USDC. Your small help can change many lives.",
+  },
+  {
+    icon: GitBranch,
+    title: "Global 4×6 Matrix",
+    text: "4-ID matrix, 6 levels. Income on level complete — $4, $10, $25…",
   },
   {
     icon: Users,
-    title: "Matrix & Team",
-    text: "3× autopool matrix with direct referrals.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Secure Fund",
-    text: "Periodic secure-fund cycles with on-chain claims.",
+    title: "Directs & Virtual IDs",
+    text: "Track every direct. Virtual IDs stay linked to your main ID.",
   },
   {
     icon: Trophy,
-    title: "CTO Reward",
-    text: "Rank rewards from package CTO pools as downline grows.",
+    title: "Royalty pool",
+    text: "15 directs qualify you. Admin splits the pool equally each month.",
   },
 ] as const;
 
@@ -76,7 +76,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
             <div className="wallet-auth-logo">
               <Image
                 src="/logo.png"
-                alt="Falcon Capital"
+                alt={APP_NAME_FULL}
                 width={88}
                 height={88}
                 priority
@@ -86,12 +86,12 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
           </div>
 
           <h1 className="wallet-auth-title">
-            <span className="text-solar-400">FALCON</span> CAPITAL
+            <span className="text-solar-400">MULTI</span> CORE
           </h1>
-          <p className="wallet-auth-sub">Packages · Matrix · Secure Fund · CTO Reward</p>
+          <p className="wallet-auth-sub">{APP_TAGLINE}</p>
           <p className="wallet-auth-desc">
-            Connect your wallet to join, upgrade packages, and manage income on
-            BNB Smart Chain (USDT).
+            One-time ${JOIN_USD} helping contribution · Direct · Global Matrix · Royalty. Connect your
+            wallet on BNB Smart Chain ({PAYMENT_TOKEN_SYMBOL}).
           </p>
 
           <ul className="wallet-auth-features">
@@ -117,9 +117,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                   <Wallet className="h-6 w-6" strokeWidth={1.6} />
                 </span>
                 <h2>Connect Wallet</h2>
-                <p className="wallet-auth-card-hint">
-                  Use MetaMask or Trust Wallet to continue.
-                </p>
+                <p className="wallet-auth-card-hint">Use MetaMask or Trust Wallet to continue.</p>
                 <button
                   type="button"
                   className="btn btn-primary btn-lg btn-block wallet-auth-cta"
@@ -130,7 +128,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                   Connect Wallet
                 </button>
                 <p className="wallet-auth-network">
-                  Target network: BNB Smart Chain — chainId 56 · USDT
+                  Target network: BNB Smart Chain Testnet — chainId 97 · {PAYMENT_TOKEN_SYMBOL}
                 </p>
               </>
             )}
@@ -145,9 +143,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                   Reading on-chain registration for{" "}
                   <span className="font-mono text-solar-300">{props.accountLabel}</span>
                 </p>
-                <p className="wallet-auth-network">
-                  New users open Register · Existing users go to Dashboard
-                </p>
+                <p className="wallet-auth-network">New users open Join · Existing users go to Dashboard</p>
               </>
             )}
 
@@ -156,38 +152,30 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                 <span className="wallet-auth-card-icon">
                   <ArrowUpRight className="h-6 w-6" strokeWidth={1.6} />
                 </span>
-                <h2>Register</h2>
+                <h2>Join the Plan</h2>
                 <p className="wallet-auth-card-hint">
-                  Wallet{" "}
-                  <span className="font-mono text-solar-300">{props.accountLabel}</span>
-                  {" "}is new — complete registration before Dashboard.
+                  Wallet <span className="font-mono text-solar-300">{props.accountLabel}</span> is new
+                  — one-time ${JOIN_USD} {PAYMENT_TOKEN_SYMBOL} helping contribution.
                 </p>
 
                 <div className="field w-full text-left">
                   <label className="label" htmlFor="sponsor">
-                    Sponsor Address
+                    Referrer Address
                   </label>
                   <input
                     id="sponsor"
                     className="input input-mono"
                     value={props.sponsorInput}
                     onChange={(e) => props.onSponsorChange(e.target.value.trim())}
-                    placeholder="0x… sponsor wallet"
+                    placeholder="Official root referrer if empty"
                     spellCheck={false}
                     disabled={props.busy}
                   />
                 </div>
 
-                <div className="field w-full text-left">
-                  <label className="label">Package</label>
-                  <select className="input" value={1} disabled>
-                    <option value={1}>Starter — $50</option>
-                  </select>
-                </div>
-
                 <p className="wallet-auth-card-hint !mb-0 text-left text-2xs">
-                  Register &amp; Buy opens <strong>2 MetaMask popups</strong>: (1) Approve{" "}
-                  {`$50`} token spend, then (2) Register. Confirm both — do not cancel the first.
+                  Empty referrer joins under the official root. Join opens <strong>2 wallet popups</strong>
+                  : (1) Approve ${JOIN_USD} {PAYMENT_TOKEN_SYMBOL}, then (2) Register.
                 </p>
 
                 <div className="flex w-full flex-col gap-2">
@@ -197,15 +185,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                     onClick={props.onRegisterBuy}
                     disabled={props.busy}
                   >
-                    Register &amp; Buy Starter
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-block"
-                    onClick={props.onRegisterOnly}
-                    disabled={props.busy}
-                  >
-                    Register Only
+                    Join · ${JOIN_USD} {PAYMENT_TOKEN_SYMBOL}
                   </button>
                   <button
                     type="button"
@@ -218,7 +198,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                 </div>
 
                 <p className="wallet-auth-network">
-                  Target network: BNB Smart Chain — chainId 56 · USDT
+                  Target network: BNB Smart Chain Testnet — chainId 97 · {PAYMENT_TOKEN_SYMBOL}
                 </p>
               </>
             )}

@@ -1,0 +1,2632 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "treasury_",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "dollarUnit_",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "owner_",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "AlreadyJoined",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "EmptyRoyaltyPool",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "EnforcedPause",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ExpectedPause",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidDollarUnit",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidLevel",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidMaxVirtual",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidPage",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidReferrer",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NativeNotAccepted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NoRoyaltyMembers",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NothingToWithdraw",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "PaymentTokenLocked",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReferrerNotMember",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "RoyaltyAlreadyDistributed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "RoyaltyRoundActive",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "SafeERC20FailedOperation",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StillReserved",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "UnknownPosition",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ZeroAddress",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sponsor",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "directCount",
+        "type": "uint32"
+      }
+    ],
+    "name": "DirectAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "kind",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "fromPosition",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "fromUser",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "toPosition",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "mainId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "IncomeLogged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "positionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "virtualIdsQueued",
+        "type": "uint16"
+      }
+    ],
+    "name": "LevelCompleted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "previous",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "current",
+        "type": "uint16"
+      }
+    ],
+    "name": "MaxVirtualIdsPerTxUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferStarted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Paused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "positionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "mainId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "isVirtual",
+        "type": "bool"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "sourcePosition",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "sourceLevel",
+        "type": "uint8"
+      }
+    ],
+    "name": "PositionCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "referrer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "positionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "Registered",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "blocked",
+        "type": "bool"
+      }
+    ],
+    "name": "RoyaltyBlockedUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "RoyaltyEntered",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "RoyaltyLeft",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "epoch",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "pool",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "members",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "perMember",
+        "type": "uint256"
+      }
+    ],
+    "name": "RoyaltyRoundFinished",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "epoch",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "pool",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "members",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "perMember",
+        "type": "uint256"
+      }
+    ],
+    "name": "RoyaltyRoundStarted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previous",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "current",
+        "type": "address"
+      }
+    ],
+    "name": "TreasuryUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Unpaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "positionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "mainId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "sourcePosition",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "sourceLevel",
+        "type": "uint8"
+      }
+    ],
+    "name": "VirtualIdCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "sourcePosition",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "mainId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "count",
+        "type": "uint16"
+      }
+    ],
+    "name": "VirtualIdQueued",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "Withdrawn",
+    "type": "event"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "fallback"
+  },
+  {
+    "inputs": [],
+    "name": "KIND_ADMIN",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "KIND_DIRECT",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "KIND_MATRIX",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "KIND_PENDING",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "KIND_ROYALTY",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "KIND_SPILL",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "KIND_UNLOCK",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MATRIX_LEVELS",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MATRIX_WIDTH",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_PAGE",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ROYALTY_DIRECTS",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ROYALTY_PERIOD",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "acceptOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "accruedMatrix",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "adminAmount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "name": "childrenOf",
+    "outputs": [
+      {
+        "internalType": "uint256[4]",
+        "name": "ids",
+        "type": "uint256[4]"
+      },
+      {
+        "internalType": "address[4]",
+        "name": "owners",
+        "type": "address[4]"
+      },
+      {
+        "internalType": "bool[4]",
+        "name": "isVirtual",
+        "type": "bool[4]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "claimable",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "claimableOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "completedMask",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "currentRoyaltyEpoch",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "directAmount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "offset",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "directsOf",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "wallets",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "distribution",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "join",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "direct",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "royalty",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[6]",
+        "name": "matrix",
+        "type": "uint256[6]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "admin",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "earnedByMain",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "earnedByPosition",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "fills",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
+    ],
+    "name": "firstDescendant",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "incomeCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "offset",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "incomeOf",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint8",
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint8",
+            "name": "level",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "fromPosition",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "fromUser",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "toPosition",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "mainId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint32",
+            "name": "timestamp",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct MultiCoreHelping.IncomeRecord[]",
+        "name": "rows",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "joinAmount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lastRoyaltyEpoch",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
+    ],
+    "name": "levelCapacity",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "levelPayout",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "mainId",
+        "type": "uint256"
+      }
+    ],
+    "name": "mainEarnings",
+    "outputs": [
+      {
+        "internalType": "uint256[6]",
+        "name": "earned",
+        "type": "uint256[6]"
+      },
+      {
+        "internalType": "uint256[6]",
+        "name": "pending",
+        "type": "uint256[6]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "earnedTotal",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "pendingTotal",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint32",
+        "name": "virtualCount",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "matrixAmount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "matrixHeld",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "positionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "offset",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "matrixLevel",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "filled",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "capacity",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "ids",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "owners",
+        "type": "address[]"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "isVirtual",
+        "type": "bool[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "positionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "matrixOverview",
+    "outputs": [
+      {
+        "internalType": "uint16[6]",
+        "name": "filled",
+        "type": "uint16[6]"
+      },
+      {
+        "internalType": "uint16[6]",
+        "name": "capacity",
+        "type": "uint16[6]"
+      },
+      {
+        "internalType": "bool[6]",
+        "name": "completed",
+        "type": "bool[6]"
+      },
+      {
+        "internalType": "uint256[6]",
+        "name": "earned",
+        "type": "uint256[6]"
+      },
+      {
+        "internalType": "uint256[6]",
+        "name": "pending",
+        "type": "uint256[6]"
+      },
+      {
+        "internalType": "uint8[6]",
+        "name": "needDirects",
+        "type": "uint8[6]"
+      },
+      {
+        "internalType": "bool[6]",
+        "name": "qualified",
+        "type": "bool[6]"
+      },
+      {
+        "internalType": "uint16[6]",
+        "name": "virtualOnComplete",
+        "type": "uint16[6]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxVirtualIdsPerTx",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "memberOf",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "referrer",
+            "type": "address"
+          },
+          {
+            "internalType": "uint32",
+            "name": "directCount",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "positionCount",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "virtualCount",
+            "type": "uint32"
+          },
+          {
+            "internalType": "bool",
+            "name": "joined",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "inRoyaltyPool",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "earnedDirect",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "earnedRoyalty",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "withdrawn",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[6]",
+            "name": "earnedMatrix",
+            "type": "uint256[6]"
+          }
+        ],
+        "internalType": "struct MultiCoreHelping.Member",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paidIds",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "name": "parentId",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paused",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paymentToken",
+    "outputs": [
+      {
+        "internalType": "contract IERC20",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "pendingByMain",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "pendingByPosition",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "pendingLevel",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "pendingOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "total",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[6]",
+        "name": "perLevel",
+        "type": "uint256[6]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pendingOwner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "positionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "positionEarnings",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "mainId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "isVirtual",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256[6]",
+        "name": "earned",
+        "type": "uint256[6]"
+      },
+      {
+        "internalType": "uint256[6]",
+        "name": "pending",
+        "type": "uint256[6]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "earnedTotal",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "pendingTotal",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "positionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "offset",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "positionIncome",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint8",
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint8",
+            "name": "level",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "fromPosition",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "fromUser",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "toPosition",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "mainId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint32",
+            "name": "timestamp",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct MultiCoreHelping.IncomeRecord[]",
+        "name": "rows",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "index",
+        "type": "uint256"
+      }
+    ],
+    "name": "positionOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "name": "positionOwner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "positions",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "isVirtual",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "mainId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "sourcePosition",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "sourceLevel",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint32",
+        "name": "createdAt",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "offset",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "positionsOf",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "ids",
+        "type": "uint256[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "owner",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isVirtual",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "mainId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "sourcePosition",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "sourceLevel",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "createdAt",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct MultiCoreHelping.PositionInfo[]",
+        "name": "info",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "maxMembers",
+        "type": "uint256"
+      }
+    ],
+    "name": "processMonthlyRoyalty",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "maxIds",
+        "type": "uint256"
+      }
+    ],
+    "name": "processVirtualQueue",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      }
+    ],
+    "name": "recoverERC20",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "referrer",
+        "type": "address"
+      }
+    ],
+    "name": "register",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
+    ],
+    "name": "requiredDirects",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "reservedFunds",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "rootOwner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "royaltyAmount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "royaltyBlocked",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "royaltyMemberCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "offset",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "royaltyMembersOf",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "wallets",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "royaltyPool",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "royaltyRound",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "epoch",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "pool",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "members",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "perMember",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cursor",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "next",
+        "type": "uint16"
+      }
+    ],
+    "name": "setMaxVirtualIdsPerTx",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "blocked",
+        "type": "bool"
+      }
+    ],
+    "name": "setRoyaltyBlocked",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "next",
+        "type": "address"
+      }
+    ],
+    "name": "setTreasury",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalClaimable",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalPendingLevel",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalPositions",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "treasury",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "unpause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "virtualIdCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
+    ],
+    "name": "virtualIdsOnComplete",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "virtualQueue",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "remaining",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint256",
+        "name": "sourcePosition",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "sourceLevel",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "mainId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "virtualQueueHead",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "virtualQueueLength",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "mainId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "offset",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "virtualsOf",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "ids",
+        "type": "uint256[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "owner",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isVirtual",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "mainId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "sourcePosition",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "sourceLevel",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "createdAt",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct MultiCoreHelping.PositionInfo[]",
+        "name": "info",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "virtualsOfMainCount",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "walletOf",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "referrer",
+            "type": "address"
+          },
+          {
+            "internalType": "uint32",
+            "name": "directCount",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "positionCount",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "virtualCount",
+            "type": "uint32"
+          },
+          {
+            "internalType": "bool",
+            "name": "joined",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "inRoyaltyPool",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "earnedDirect",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "earnedRoyalty",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "withdrawn",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[6]",
+            "name": "earnedMatrix",
+            "type": "uint256[6]"
+          }
+        ],
+        "internalType": "struct MultiCoreHelping.Member",
+        "name": "member",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint256",
+        "name": "claimableAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "pendingAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[6]",
+        "name": "pendingPerLevel",
+        "type": "uint256[6]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "primaryPosition",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint16[6]",
+        "name": "matrixFilled",
+        "type": "uint16[6]"
+      },
+      {
+        "internalType": "bool[6]",
+        "name": "matrixCompleted",
+        "type": "bool[6]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "withdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
+  }
+]

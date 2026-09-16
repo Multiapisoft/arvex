@@ -1,38 +1,42 @@
 import type { Provider } from "ethers";
-import falconAbiJson from "./falcon-abi.json";
+import multicoreAbiJson from "./multicore-abi.json";
 
-/**
- * Falcon Capital — BSC Mainnet defaults (hardcoded, no .env required).
- * Chain 56 · USDT · live FalconCapital.
- */
+export const BSC_CHAIN_ID = 97;
+export const BSC_CHAIN_ID_HEX = "0x61";
+export const BSC_RPC = "https://bsc-testnet-dataseed.bnbchain.org";
+export const EXPLORER_BASE = "https://testnet.bscscan.com";
 
-export const BSC_CHAIN_ID = 56;
-export const BSC_CHAIN_ID_HEX = "0x38";
+export const APP_NAME_FULL = "Multi Core Helping Plan";
+export const APP_TAGLINE = "Together We Help, Together We Grow";
 
-/** @deprecated Use BSC_CHAIN_ID */
-export const BSC_TESTNET_CHAIN_ID = BSC_CHAIN_ID;
+export const DEFAULT_CONTRACT_ADDRESS = "0x643a418c5a432c613316603AADa01f7970EBC93e";
 
-export const BSC_RPC = "https://bsc-dataseed.binance.org";
-/** @deprecated Use BSC_RPC */
-export const BSC_TESTNET_RPC = BSC_RPC;
+/** BSC testnet USDC (18 decimals). */
+export const DEFAULT_PAYMENT_TOKEN = "0x4aE58BfC16b20bD67755FFD5560e85779D962415";
 
-export const EXPLORER_BASE = "https://bscscan.com";
+/** Official root / treasury — first referrer on this deploy. */
+export const ROOT_REFERRER = "0xd65b211220002F7d95Fae52313BaC4f6585Ac971";
 
-/** Live FalconCapital (BSC Mainnet). */
-export const DEFAULT_CONTRACT_ADDRESS = "0xde6b15a2b9e388d1361fe9689e69bbb8b9fa9f05";
+export const PAYMENT_TOKEN_SYMBOL = "USDC";
 
-/** Official BSC USDT (BEP20, 18 decimals). */
-export const DEFAULT_PAYMENT_TOKEN = "0x55d398326f99059fF775485246999027B3197955";
+export const JOIN_USD = 5;
+export const ROYALTY_DIRECTS = 15;
 
-export const PAYMENT_TOKEN_SYMBOL = "USDT";
-export const PAYMENT_TOKEN_DECIMALS = 18;
-/** Matches on-chain WITHDRAW_FEE_PERCENT (admin fee on withdraw / SF claim). */
-export const WITHDRAW_FEE_PERCENT = 10;
+export const LEVEL_IDS = [4, 16, 64, 256, 1024, 4096] as const;
+export const LEVEL_INCOME_USD = [4, 10, 25, 60, 150, 375] as const;
+export const VIRTUAL_ON_COMPLETE = [0, 3, 6, 12, 24, 48] as const;
+export const REQUIRED_DIRECTS = [0, 0, 2, 2, 2, 4] as const;
 
-/**
- * Lowest practical gas for BSC writes.
- * Caps at 3 gwei — enough for BSC mainnet without overpaying.
- */
+export const INCOME_TYPES: Record<number, string> = {
+  1: "Direct",
+  2: "Matrix",
+  3: "Pending",
+  4: "Unlocked",
+  5: "Royalty",
+  6: "Spill",
+  7: "Admin",
+};
+
 export async function lowGasOverrides(
   provider: Provider,
   estimateGas?: () => Promise<bigint>,
@@ -40,28 +44,25 @@ export async function lowGasOverrides(
   const fee = await provider.getFeeData();
   let gasPrice = fee.gasPrice ?? fee.maxFeePerGas ?? 1_000_000_000n;
   if (gasPrice <= 0n) gasPrice = 1_000_000_000n;
-
-  const CAP = 3_000_000_000n; // 3 gwei
+  const CAP = 3_000_000_000n;
   if (gasPrice > CAP) gasPrice = CAP;
-
   const overrides: { gasPrice: bigint; gasLimit?: bigint } = { gasPrice };
   if (estimateGas) {
     try {
       const estimated = await estimateGas();
       overrides.gasLimit = (estimated * 110n) / 100n;
     } catch {
-      // Wallet will estimate if our estimate fails
+      /* wallet estimates */
     }
   }
   return overrides;
 }
 
-/** MetaMask / wallet_addEthereumChain params for BSC Mainnet. */
 export const BSC_MAINNET_CHAIN_PARAMS = {
   chainId: BSC_CHAIN_ID_HEX,
-  chainName: "BNB Smart Chain",
-  nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
-  rpcUrls: [BSC_RPC, "https://bsc-dataseed1.binance.org", "https://rpc.ankr.com/bsc"],
+  chainName: "BNB Smart Chain Testnet",
+  nativeCurrency: { name: "tBNB", symbol: "tBNB", decimals: 18 },
+  rpcUrls: [BSC_RPC, "https://bnb-testnet.g.alchemy.com/v2/demo", "https://bsc-testnet.public.blastapi.io"],
   blockExplorerUrls: [EXPLORER_BASE],
 } as const;
 
@@ -69,12 +70,10 @@ type EthRequest = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
 };
 
-/** Switch wallet to BSC Mainnet (56). If missing, add the chain then switch. */
 export async function ensureBscMainnet(eth: EthRequest): Promise<void> {
   const chainHex = String(await eth.request({ method: "eth_chainId" }));
   const chainId = Number.parseInt(chainHex, 16);
   if (chainId === BSC_CHAIN_ID) return;
-
   try {
     await eth.request({
       method: "wallet_switchEthereumChain",
@@ -89,31 +88,9 @@ export async function ensureBscMainnet(eth: EthRequest): Promise<void> {
       });
       return;
     }
-    throw new Error("Please switch MetaMask to BNB Smart Chain (chainId 56)");
+    throw new Error("Please switch MetaMask to BNB Smart Chain Testnet (chainId 97)");
   }
 }
-
-export const CTO_RANK_COUNT = 4;
-
-export const PACKAGE_NAMES = [
-  "",
-  "Starter",
-  "Silver",
-  "Gold",
-  "Diamond",
-  "Crown",
-] as const;
-
-export const PACKAGE_PRICES_USD = [0, 50, 100, 200, 400, 800] as const;
-
-export const INCOME_TYPES: Record<number, string> = {
-  0: "All",
-  1: "Direct",
-  2: "Matrix",
-  3: "Global",
-  4: "CTO",
-  5: "Secure Fund",
-};
 
 export const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
@@ -123,4 +100,4 @@ export const ERC20_ABI = [
   "function symbol() view returns (string)",
 ] as const;
 
-export const FALCON_ABI = falconAbiJson;
+export const MULTICORE_ABI = multicoreAbiJson;

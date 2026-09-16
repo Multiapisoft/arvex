@@ -38,7 +38,13 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+.next-env.d.ts
 
 # local admin data
 /data
+
+# Cloudflare / OpenNext
+.open-next
+.wrangler
+.dev.vars
+

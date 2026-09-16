@@ -1,5 +1,5 @@
-import FalconApp from "@/components/FalconApp";
+import MultiCoreApp from "@/components/MultiCoreApp";
 
 export default function Home() {
-  return <FalconApp />;
+  return <MultiCoreApp />;
 }
