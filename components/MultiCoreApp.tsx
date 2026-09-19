@@ -1722,7 +1722,7 @@ export default function MultiCoreApp() {
                   disabled={busy || !adminPuller || totalPullable === 0n}
                   onClick={() =>
                     void runTx("sellAdminFunds", async () => {
-                      const eth = window.ethereum;
+                      const eth = getEthereum();
                       if (!eth) throw new Error("No wallet");
                       await ensureBscMainnet(eth);
                       const provider = new BrowserProvider(eth);
