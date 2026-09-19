@@ -47,11 +47,6 @@
   },
   {
     "inputs": [],
-    "name": "InsufficientAdminFunds",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "InvalidDollarUnit",
     "type": "error"
   },
@@ -155,11 +150,6 @@
   },
   {
     "inputs": [],
-    "name": "UnauthorizedPuller",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "UnknownPosition",
     "type": "error"
   },
@@ -167,25 +157,6 @@
     "inputs": [],
     "name": "ZeroAddress",
     "type": "error"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "AdminFundsReleased",
-    "type": "event"
   },
   {
     "anonymous": false,
@@ -893,19 +864,6 @@
   },
   {
     "inputs": [],
-    "name": "adminClaimable",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "adminPuller",
     "outputs": [
       {
@@ -1129,19 +1087,6 @@
       }
     ],
     "name": "earnedByPosition",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "excessFunds",
     "outputs": [
       {
         "internalType": "uint256",
@@ -2135,55 +2080,6 @@
       }
     ],
     "name": "register",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      }
-    ],
-    "name": "releaseAdminFunds",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      }
-    ],
-    "name": "releaseAllFunds",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      }
-    ],
-    "name": "releaseExcessFunds",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

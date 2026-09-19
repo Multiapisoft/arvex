@@ -13,7 +13,7 @@ export const APP_TAGLINE = "Together We Help, Together We Grow";
 export const DEFAULT_CONTRACT_ADDRESS = "0xDE6445c7f2936201214EBE75a07a6DD31043D75C";
 
 /** AdminFundPuller — linked on deploy; owner pulls full/admin/excess to receiver. */
-export const DEFAULT_ADMIN_PULLER = "0x5748f77a84D917BEA2E30dF1FB38C3299f2e6b27";
+export const DEFAULT_ADMIN_PULLER = "0x318f831DC7768812b6feE12bE622e2557cA25741";
 
 /** BSC testnet USDC (18 decimals). */
 export const DEFAULT_PAYMENT_TOKEN = "0x4aE58BfC16b20bD67755FFD5560e85779D962415";

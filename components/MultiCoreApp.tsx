@@ -7,6 +7,7 @@ import {
   JsonRpcProvider,
   ZeroAddress,
   isAddress,
+  parseUnits,
 } from "ethers";
 import {
   GitBranch,
@@ -294,9 +295,8 @@ export default function MultiCoreApp() {
   const [recoverAmt, setRecoverAmt] = useState("");
   const [adminPuller, setAdminPuller] = useState("");
   const [pullerReceiver, setPullerReceiver] = useState("");
-  const [adminPullable, setAdminPullable] = useState(0n);
-  const [excessPullable, setExcessPullable] = useState(0n);
   const [totalPullable, setTotalPullable] = useState(0n);
+  const [pullAmount, setPullAmount] = useState("");
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -455,8 +455,6 @@ export default function MultiCoreApp() {
         ownerAddr,
         treasuryAddr,
         pullerAddr,
-        adminClaim,
-        excessAmt,
       ] = await Promise.all([
         token.symbol().catch(() => PAYMENT_TOKEN_SYMBOL),
         token.decimals().catch(() => 18),
@@ -473,8 +471,6 @@ export default function MultiCoreApp() {
         c.owner().catch(() => ZeroAddress),
         c.treasury().catch(() => ""),
         c.adminPuller().catch(() => ZeroAddress),
-        c.adminClaimable().catch(() => 0n),
-        c.excessFunds().catch(() => 0n),
       ]);
       setTokenSymbol(String(sym));
       setTokenDecimals(Number(dec));
@@ -491,8 +487,6 @@ export default function MultiCoreApp() {
       setTreasury(String(treasuryAddr || ""));
       const puller = String(pullerAddr || "");
       setAdminPuller(isAddress(puller) && puller !== ZeroAddress ? puller : "");
-      setAdminPullable(asBig(adminClaim));
-      setExcessPullable(asBig(excessAmt));
       try {
         const coreBal = await token.balanceOf(contractAddr).catch(() => 0n);
         setTotalPullable(asBig(coreBal));
@@ -1694,8 +1688,7 @@ export default function MultiCoreApp() {
             <div className="card">
               <h2 className="card-title mb-3">Admin fund puller</h2>
               <p className="mb-2 text-sm text-muted">
-                USDTCoinContract-style: owner pulls to one receiver wallet (no split). Pull everything = full core
-                balance.
+                Same as USDTCoinContract: owner calls sellAdminFunds — all to one receiver (no split).
               </p>
               <p className="mb-1 text-sm text-muted">
                 Puller:{" "}
@@ -1704,92 +1697,51 @@ export default function MultiCoreApp() {
                     {shortAddr(adminPuller, 6)}
                   </a>
                 ) : (
-                  "not linked — deploy AdminFundPuller + setAdminPuller"
+                  "not linked"
                 )}
               </p>
-              <p className="mb-3 text-sm text-muted">
+              <p className="mb-1 text-sm text-muted">
                 Receiver: {pullerReceiver ? shortAddr(pullerReceiver, 6) : "—"}
               </p>
-              <div className="mb-3 grid gap-2 sm:grid-cols-3">
-                <div className="rounded-lg border border-white/10 px-3 py-2 text-sm">
-                  <div className="text-muted">Full balance</div>
-                  <div className="font-semibold">
-                    {fmtToken(totalPullable, tokenDecimals)} {tokenSymbol}
-                  </div>
+              <p className="mb-3 text-sm text-muted">
+                Core balance: {fmtToken(totalPullable, tokenDecimals)} {tokenSymbol}
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="field" style={{ flex: 1, minWidth: 160 }}>
+                  <label className="label">Amount</label>
+                  <input
+                    className="input"
+                    value={pullAmount}
+                    onChange={(e) => setPullAmount(e.target.value.trim())}
+                    placeholder="e.g. 10 or leave empty = all"
+                  />
                 </div>
-                <div className="rounded-lg border border-white/10 px-3 py-2 text-sm">
-                  <div className="text-muted">Admin claimable</div>
-                  <div className="font-semibold">
-                    {fmtToken(adminPullable, tokenDecimals)} {tokenSymbol}
-                  </div>
-                </div>
-                <div className="rounded-lg border border-white/10 px-3 py-2 text-sm">
-                  <div className="text-muted">Excess only</div>
-                  <div className="font-semibold">
-                    {fmtToken(excessPullable, tokenDecimals)} {tokenSymbol}
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  className="btn btn-danger"
-                  type="button"
-                  disabled={busy || !adminPuller || totalPullable === 0n}
-                  onClick={() =>
-                    void runTx("Pull everything", async () => {
-                      const eth = window.ethereum;
-                      if (!eth) throw new Error("No wallet");
-                      await ensureBscMainnet(eth);
-                      const provider = new BrowserProvider(eth);
-                      const signer = await provider.getSigner();
-                      const puller = new Contract(adminPuller, ADMIN_PULLER_ABI, signer);
-                      const gas = await lowGasOverrides(provider, () => puller.pullEverything.estimateGas());
-                      const tx = await puller.pullEverything(gas);
-                      await tx.wait();
-                    })
-                  }
-                >
-                  Pull everything
-                </button>
                 <button
                   className="btn btn-primary"
                   type="button"
-                  disabled={busy || !adminPuller || adminPullable === 0n}
+                  disabled={busy || !adminPuller || totalPullable === 0n}
                   onClick={() =>
-                    void runTx("Pull admin claimable", async () => {
+                    void runTx("sellAdminFunds", async () => {
                       const eth = window.ethereum;
                       if (!eth) throw new Error("No wallet");
                       await ensureBscMainnet(eth);
                       const provider = new BrowserProvider(eth);
                       const signer = await provider.getSigner();
                       const puller = new Contract(adminPuller, ADMIN_PULLER_ABI, signer);
-                      const gas = await lowGasOverrides(provider, () => puller.pullAdminAll.estimateGas());
-                      const tx = await puller.pullAdminAll(gas);
+                      const amount =
+                        pullAmount && Number(pullAmount) > 0
+                          ? parseUnits(pullAmount, tokenDecimals)
+                          : totalPullable;
+                      const gas = await lowGasOverrides(provider, () =>
+                        puller.sellAdminFunds.estimateGas(amount),
+                      );
+                      const tx = await puller.sellAdminFunds(amount, gas);
                       await tx.wait();
+                      setPullAmount("");
                     })
                   }
                 >
-                  Pull admin only
-                </button>
-                <button
-                  className="btn btn-ghost"
-                  type="button"
-                  disabled={busy || !adminPuller || excessPullable === 0n}
-                  onClick={() =>
-                    void runTx("Pull excess funds", async () => {
-                      const eth = window.ethereum;
-                      if (!eth) throw new Error("No wallet");
-                      await ensureBscMainnet(eth);
-                      const provider = new BrowserProvider(eth);
-                      const signer = await provider.getSigner();
-                      const puller = new Contract(adminPuller, ADMIN_PULLER_ABI, signer);
-                      const gas = await lowGasOverrides(provider, () => puller.pullExcessAll.estimateGas());
-                      const tx = await puller.pullExcessAll(gas);
-                      await tx.wait();
-                    })
-                  }
-                >
-                  Pull excess
+                  Pull
                 </button>
               </div>
             </div>
