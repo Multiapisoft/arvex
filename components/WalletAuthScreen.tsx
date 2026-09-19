@@ -44,7 +44,7 @@ const FEATURES = [
   {
     icon: GitBranch,
     title: "Global 4×6 Matrix",
-    text: "4-ID matrix, 6 levels. Income on level complete — $4, $10, $25…",
+    text: "4-ID matrix, 6 levels. L1 complete → $4, L2 → $10, then $25 / $60 / $150 / $375. Not $1 per join.",
   },
   {
     icon: Users,

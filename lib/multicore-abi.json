@@ -47,6 +47,11 @@
   },
   {
     "inputs": [],
+    "name": "InsufficientAdminFunds",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "InvalidDollarUnit",
     "type": "error"
   },
@@ -150,6 +155,11 @@
   },
   {
     "inputs": [],
+    "name": "UnauthorizedPuller",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "UnknownPosition",
     "type": "error"
   },
@@ -157,6 +167,44 @@
     "inputs": [],
     "name": "ZeroAddress",
     "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "AdminFundsReleased",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previous",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "current",
+        "type": "address"
+      }
+    ],
+    "name": "AdminPullerUpdated",
+    "type": "event"
   },
   {
     "anonymous": false,
@@ -844,6 +892,32 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "adminClaimable",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "adminPuller",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -1055,6 +1129,19 @@
       }
     ],
     "name": "earnedByPosition",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "excessFunds",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1441,6 +1528,11 @@
         "internalType": "uint16[6]",
         "name": "virtualOnComplete",
         "type": "uint16[6]"
+      },
+      {
+        "internalType": "uint256[6]",
+        "name": "held",
+        "type": "uint256[6]"
       }
     ],
     "stateMutability": "view",
@@ -2048,6 +2140,55 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      }
+    ],
+    "name": "releaseAdminFunds",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      }
+    ],
+    "name": "releaseAllFunds",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      }
+    ],
+    "name": "releaseExcessFunds",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "renounceOwnership",
     "outputs": [],
@@ -2217,6 +2358,19 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "next",
+        "type": "address"
+      }
+    ],
+    "name": "setAdminPuller",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -2613,6 +2767,11 @@
         "internalType": "bool[6]",
         "name": "matrixCompleted",
         "type": "bool[6]"
+      },
+      {
+        "internalType": "uint256[6]",
+        "name": "matrixHeldAmounts",
+        "type": "uint256[6]"
       }
     ],
     "stateMutability": "view",

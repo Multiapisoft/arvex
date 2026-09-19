@@ -31,6 +31,7 @@ export type MatrixOverviewData = {
   earned: bigint[];
   pending: bigint[];
   qualified: boolean[];
+  held: bigint[];
 };
 
 type PositionOption = {
@@ -204,6 +205,7 @@ export function MatrixBoard({
   const paidLevels = overview?.completed.filter(Boolean).length ?? 0;
   const earnedTotal = overview?.earned.reduce((a, b) => a + b, 0n) ?? 0n;
   const pendingTotal = overview?.pending.reduce((a, b) => a + b, 0n) ?? 0n;
+  const heldTotal = overview?.held?.reduce((a, b) => a + b, 0n) ?? 0n;
   const idOptions = positions.length ? positions : [{ id: positionId, isVirtual }];
 
   return (
@@ -460,6 +462,10 @@ export function MatrixBoard({
                 </strong>
               </li>
               <li>
+                <span>Held until complete</span>
+                <strong>{fmtUsd(heldTotal, decimals)}</strong>
+              </li>
+              <li>
                 <span>Pending unlock</span>
                 <strong>{fmtUsd(pendingTotal, decimals)}</strong>
               </li>
@@ -476,7 +482,11 @@ export function MatrixBoard({
                   </span>
                   <strong>
                     ${LEVEL_INCOME_USD[i]}
-                    {overview?.completed[i] ? " · paid" : ""}
+                    {overview?.completed[i]
+                      ? " · paid"
+                      : overview?.held?.[i] && overview.held[i] > 0n
+                        ? ` · held ${fmtUsd(overview.held[i], decimals)}`
+                        : ""}
                   </strong>
                 </li>
               ))}

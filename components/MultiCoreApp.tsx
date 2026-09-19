@@ -31,6 +31,7 @@ import {
   JOIN_USD,
   LEVEL_IDS,
   LEVEL_INCOME_USD,
+  ADMIN_PULLER_ABI,
   MULTICORE_ABI,
   PAYMENT_TOKEN_SYMBOL,
   REQUIRED_DIRECTS,
@@ -225,13 +226,15 @@ export default function MultiCoreApp() {
   const [positionCount, setPositionCount] = useState(0);
   const [virtualCount, setVirtualCount] = useState(0);
   const [inRoyalty, setInRoyalty] = useState(false);
-  const [earnedDirect, setEarnedDirect] = useState(0n);
   const [earnedRoyalty, setEarnedRoyalty] = useState(0n);
   const [earnedMatrix, setEarnedMatrix] = useState<bigint[]>(Array(6).fill(0n));
+  const [earnedAdmin, setEarnedAdmin] = useState(0n);
+  const [earnedSpill, setEarnedSpill] = useState(0n);
   const [withdrawn, setWithdrawn] = useState(0n);
   const [claimable, setClaimable] = useState(0n);
   const [pendingAmount, setPendingAmount] = useState(0n);
   const [pendingPerLevel, setPendingPerLevel] = useState<bigint[]>(Array(6).fill(0n));
+  const [heldPerLevel, setHeldPerLevel] = useState<bigint[]>(Array(6).fill(0n));
   const [primaryPosition, setPrimaryPosition] = useState(0n);
   const [matrixFilled, setMatrixFilled] = useState<number[]>(Array(6).fill(0));
   const [matrixCompleted, setMatrixCompleted] = useState<boolean[]>(Array(6).fill(false));
@@ -289,6 +292,11 @@ export default function MultiCoreApp() {
   const [recoverToken, setRecoverToken] = useState("");
   const [recoverTo, setRecoverTo] = useState("");
   const [recoverAmt, setRecoverAmt] = useState("");
+  const [adminPuller, setAdminPuller] = useState("");
+  const [pullerReceiver, setPullerReceiver] = useState("");
+  const [adminPullable, setAdminPullable] = useState(0n);
+  const [excessPullable, setExcessPullable] = useState(0n);
+  const [totalPullable, setTotalPullable] = useState(0n);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -446,6 +454,9 @@ export default function MultiCoreApp() {
         pausedVal,
         ownerAddr,
         treasuryAddr,
+        pullerAddr,
+        adminClaim,
+        excessAmt,
       ] = await Promise.all([
         token.symbol().catch(() => PAYMENT_TOKEN_SYMBOL),
         token.decimals().catch(() => 18),
@@ -461,6 +472,9 @@ export default function MultiCoreApp() {
         c.paused().catch(() => false),
         c.owner().catch(() => ZeroAddress),
         c.treasury().catch(() => ""),
+        c.adminPuller().catch(() => ZeroAddress),
+        c.adminClaimable().catch(() => 0n),
+        c.excessFunds().catch(() => 0n),
       ]);
       setTokenSymbol(String(sym));
       setTokenDecimals(Number(dec));
@@ -475,6 +489,27 @@ export default function MultiCoreApp() {
       setRoyaltyEpoch(asBig(epoch));
       setPaused(Boolean(pausedVal));
       setTreasury(String(treasuryAddr || ""));
+      const puller = String(pullerAddr || "");
+      setAdminPuller(isAddress(puller) && puller !== ZeroAddress ? puller : "");
+      setAdminPullable(asBig(adminClaim));
+      setExcessPullable(asBig(excessAmt));
+      try {
+        const coreBal = await token.balanceOf(contractAddr).catch(() => 0n);
+        setTotalPullable(asBig(coreBal));
+      } catch {
+        setTotalPullable(0n);
+      }
+      if (isAddress(puller) && puller !== ZeroAddress) {
+        try {
+          const p = new Contract(puller, ADMIN_PULLER_ABI, provider);
+          const recv = await p.receiver().catch(() => "");
+          setPullerReceiver(String(recv || ""));
+        } catch {
+          setPullerReceiver("");
+        }
+      } else {
+        setPullerReceiver("");
+      }
       if (account) {
         setIsOwner(String(ownerAddr).toLowerCase() === account.toLowerCase());
       }
@@ -488,6 +523,8 @@ export default function MultiCoreApp() {
       setUserChecked(false);
       setRegistered(false);
       setUserLoading(false);
+      setEarnedAdmin(0n);
+      setEarnedSpill(0n);
       return;
     }
     if (!isAddress(contractAddr) || contractAddr === ZeroAddress) {
@@ -526,7 +563,6 @@ export default function MultiCoreApp() {
       setPositionCount(Number(member.positionCount ?? member[2] ?? 0));
       setVirtualCount(Number(member.virtualCount ?? member[3] ?? 0));
       setInRoyalty(Boolean(member.inRoyaltyPool ?? member[5]));
-      setEarnedDirect(asBig(member.earnedDirect ?? member[6]));
       setEarnedRoyalty(asBig(member.earnedRoyalty ?? member[7]));
       setWithdrawn(asBig(member.withdrawn ?? member[8]));
       setEarnedMatrix(asBigArr(member.earnedMatrix ?? member[9]));
@@ -537,6 +573,7 @@ export default function MultiCoreApp() {
       setPrimaryPosition(primary);
       setMatrixFilled(asNumArr(wallet.matrixFilled ?? wallet[5]));
       setMatrixCompleted(asBoolArr(wallet.matrixCompleted ?? wallet[6]));
+      setHeldPerLevel(asBigArr(wallet.matrixHeldAmounts ?? wallet[7]));
       setBalance(asBig(bal));
       setAllowance(asBig(allow));
       setIsOwner(String(ownerAddr).toLowerCase() === account.toLowerCase());
@@ -562,9 +599,9 @@ export default function MultiCoreApp() {
     try {
       const c = await getReadContract();
       const totalLen = Number(await c.incomeCount(account).catch(() => 0n));
-      const fetchLimit = Math.min(64, Math.max(PAGE_SIZE * 3, Math.min(totalLen, 64)));
-      const start = Math.max(0, totalLen - fetchLimit);
-      const raw = await c.incomeOf(account, start, fetchLimit).catch(() => []);
+      // Pull full ledger for accurate Admin/Spill totals (creator wallet can be large).
+      const fetchLimit = Math.min(256, Math.max(0, totalLen));
+      const raw = fetchLimit > 0 ? await c.incomeOf(account, 0, fetchLimit).catch(() => []) : [];
       let all: IncomeRow[] = (raw as unknown[]).map((r) => {
         const row = r as Record<string, unknown> & { [i: number]: unknown };
         return {
@@ -578,15 +615,25 @@ export default function MultiCoreApp() {
           timestamp: Number(row.timestamp ?? row[7] ?? 0),
         };
       });
+      let adminSum = 0n;
+      let spillSum = 0n;
+      for (const row of all) {
+        if (row.kind === 7) adminSum += row.amount;
+        else if (row.kind === 6) spillSum += row.amount;
+      }
+      setEarnedAdmin(adminSum);
+      setEarnedSpill(spillSum);
       all = all.reverse();
-      if (incomeFilter > 0) all = all.filter((r) => r.kind === incomeFilter);
-      setHistoryTotal(all.length);
+      const filtered = incomeFilter > 0 ? all.filter((r) => r.kind === incomeFilter) : all;
+      setHistoryTotal(filtered.length);
       const offset = historyPage * PAGE_SIZE;
-      setHistoryRows(all.slice(offset, offset + PAGE_SIZE));
+      setHistoryRows(filtered.slice(offset, offset + PAGE_SIZE));
     } catch (e) {
       console.error(e);
       setHistoryRows([]);
       setHistoryTotal(0);
+      setEarnedAdmin(0n);
+      setEarnedSpill(0n);
     } finally {
       setIncomeLoading(false);
     }
@@ -696,6 +743,7 @@ export default function MultiCoreApp() {
           earned: asBigArr(overview.earned ?? overview[3]),
           pending: asBigArr(overview.pending ?? overview[4]),
           qualified: asBoolArr(overview.qualified ?? overview[6]),
+          held: asBigArr(overview.held ?? overview[8]),
         });
         const kids = kidsRaw ? parseKids(kidsRaw) : emptyKids();
         setMatrixSlots(kids);
@@ -1055,7 +1103,14 @@ export default function MultiCoreApp() {
   const shellTitle = navItems.find((t) => t.id === tab)?.label || "Dashboard";
   const historyPages = Math.max(1, Math.ceil(historyTotal / PAGE_SIZE) || 1);
   const earnedMatrixTotal = earnedMatrix.reduce((a, b) => a + b, 0n);
-  const earnedTotal = earnedDirect + earnedRoyalty + earnedMatrixTotal;
+  // Lifetime = everything credited (matrix/royalty + admin/spill for treasury).
+  const earnedTotal = earnedRoyalty + earnedMatrixTotal + earnedAdmin + earnedSpill;
+  const heldTotal = heldPerLevel.reduce((a, b) => a + b, 0n);
+  const isTreasuryWallet =
+    !!account &&
+    !!treasury &&
+    isAddress(treasury) &&
+    account.toLowerCase() === treasury.toLowerCase();
 
   function handleNavigate(id: string) {
     if (id === "admin" && !isOwner) {
@@ -1229,7 +1284,13 @@ export default function MultiCoreApp() {
                   ["Virtual IDs", String(virtualCount)],
                   ["Withdrawable", fmtUsd(claimable, tokenDecimals)],
                   ["Withdrawn", fmtUsd(withdrawn, tokenDecimals)],
-                  ["Direct income", fmtUsd(earnedDirect, tokenDecimals)],
+                  ...(isTreasuryWallet
+                    ? ([
+                        ["Admin income", fmtUsd(earnedAdmin, tokenDecimals)],
+                        ["Spill income", fmtUsd(earnedSpill, tokenDecimals)],
+                      ] as const)
+                    : ([] as const)),
+                  ["Held until level complete", fmtUsd(heldTotal, tokenDecimals)],
                   ["Matrix income", fmtUsd(earnedMatrixTotal, tokenDecimals)],
                   ["Royalty income", fmtUsd(earnedRoyalty, tokenDecimals)],
                   ["Pending levels", fmtUsd(pendingAmount, tokenDecimals)],
@@ -1240,7 +1301,7 @@ export default function MultiCoreApp() {
               ).map(([label, value], i) => (
                 <div className="card" key={label}>
                   <div className="stat-label !text-left">{label}</div>
-                  <div className={`stat-value !text-left${i === 4 ? " text-gradient-gold" : ""}`}>{value}</div>
+                  <div className={`stat-value !text-left${label === "Withdrawable" ? " text-gradient-gold" : ""}`}>{value}</div>
                 </div>
               ))}
             </div>
@@ -1266,7 +1327,12 @@ export default function MultiCoreApp() {
                       />
                     </div>
                     <p className="mt-1 text-2xs text-muted">
-                      Need {REQUIRED_DIRECTS[i]} directs
+                      {matrixCompleted[i]
+                        ? `Paid $${LEVEL_INCOME_USD[i]} on complete`
+                        : heldPerLevel[i] > 0n
+                          ? `Held ${fmtUsd(heldPerLevel[i], tokenDecimals)} · $${LEVEL_INCOME_USD[i]} when ${cap}/${cap}`
+                          : `$${LEVEL_INCOME_USD[i]} when ${cap} IDs complete`}
+                      {REQUIRED_DIRECTS[i] > 0 ? ` · need ${REQUIRED_DIRECTS[i]} directs` : ""}
                       {pendingPerLevel[i] > 0n ? ` · pending ${fmtUsd(pendingPerLevel[i], tokenDecimals)}` : ""}
                     </p>
                   </div>
@@ -1280,14 +1346,24 @@ export default function MultiCoreApp() {
           <section className="card">
             <h2 className="card-title">Withdraw to your wallet</h2>
             <p className="mb-4 text-sm text-muted">
-              Pull your claimable {tokenSymbol} to {shortAddr(account, 6)}. No platform fee.
+              {isTreasuryWallet
+                ? "Creator/treasury wallet earns Admin (~$2.26 per join) plus Spill (matrix levels with no upline). Matrix level pay still only clears when a level is full."
+                : "Matrix claimable when a level is full: L1 $4 (4 IDs), L2 $10 (16), L3 $25, L4 $60, L5 $150, L6 $375. Not $1 per join. No platform fee."}
             </p>
             <div className="grid-stats mb-4">
               <StatTile label="Claimable" value={fmtUsd(claimable, tokenDecimals)} accent />
+              <StatTile label="Held until complete" value={fmtUsd(heldTotal, tokenDecimals)} />
               <StatTile label="Already withdrawn" value={fmtUsd(withdrawn, tokenDecimals)} />
               <StatTile label="Wallet balance" value={`${fmtToken(balance, tokenDecimals)} ${tokenSymbol}`} />
               <StatTile label={`${tokenSymbol} allowance`} value={`${fmtToken(allowance, tokenDecimals)} ${tokenSymbol}`} />
               <StatTile label="Lifetime earned" value={fmtUsd(earnedTotal, tokenDecimals)} />
+              {isTreasuryWallet && (
+                <>
+                  <StatTile label="Admin income" value={fmtUsd(earnedAdmin, tokenDecimals)} />
+                  <StatTile label="Spill income" value={fmtUsd(earnedSpill, tokenDecimals)} />
+                  <StatTile label="Matrix income" value={fmtUsd(earnedMatrixTotal, tokenDecimals)} />
+                </>
+              )}
             </div>
             <button
               className="btn btn-primary"
@@ -1611,6 +1687,109 @@ export default function MultiCoreApp() {
                   }
                 >
                   Unpause
+                </button>
+              </div>
+            </div>
+
+            <div className="card">
+              <h2 className="card-title mb-3">Admin fund puller</h2>
+              <p className="mb-2 text-sm text-muted">
+                USDTCoinContract-style: owner pulls to one receiver wallet (no split). Pull everything = full core
+                balance.
+              </p>
+              <p className="mb-1 text-sm text-muted">
+                Puller:{" "}
+                {adminPuller ? (
+                  <a href={explorerAddress(adminPuller, EXPLORER_BASE)} target="_blank" rel="noopener noreferrer">
+                    {shortAddr(adminPuller, 6)}
+                  </a>
+                ) : (
+                  "not linked — deploy AdminFundPuller + setAdminPuller"
+                )}
+              </p>
+              <p className="mb-3 text-sm text-muted">
+                Receiver: {pullerReceiver ? shortAddr(pullerReceiver, 6) : "—"}
+              </p>
+              <div className="mb-3 grid gap-2 sm:grid-cols-3">
+                <div className="rounded-lg border border-white/10 px-3 py-2 text-sm">
+                  <div className="text-muted">Full balance</div>
+                  <div className="font-semibold">
+                    {fmtToken(totalPullable, tokenDecimals)} {tokenSymbol}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-white/10 px-3 py-2 text-sm">
+                  <div className="text-muted">Admin claimable</div>
+                  <div className="font-semibold">
+                    {fmtToken(adminPullable, tokenDecimals)} {tokenSymbol}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-white/10 px-3 py-2 text-sm">
+                  <div className="text-muted">Excess only</div>
+                  <div className="font-semibold">
+                    {fmtToken(excessPullable, tokenDecimals)} {tokenSymbol}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="btn btn-danger"
+                  type="button"
+                  disabled={busy || !adminPuller || totalPullable === 0n}
+                  onClick={() =>
+                    void runTx("Pull everything", async () => {
+                      const eth = window.ethereum;
+                      if (!eth) throw new Error("No wallet");
+                      await ensureBscMainnet(eth);
+                      const provider = new BrowserProvider(eth);
+                      const signer = await provider.getSigner();
+                      const puller = new Contract(adminPuller, ADMIN_PULLER_ABI, signer);
+                      const gas = await lowGasOverrides(provider, () => puller.pullEverything.estimateGas());
+                      const tx = await puller.pullEverything(gas);
+                      await tx.wait();
+                    })
+                  }
+                >
+                  Pull everything
+                </button>
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={busy || !adminPuller || adminPullable === 0n}
+                  onClick={() =>
+                    void runTx("Pull admin claimable", async () => {
+                      const eth = window.ethereum;
+                      if (!eth) throw new Error("No wallet");
+                      await ensureBscMainnet(eth);
+                      const provider = new BrowserProvider(eth);
+                      const signer = await provider.getSigner();
+                      const puller = new Contract(adminPuller, ADMIN_PULLER_ABI, signer);
+                      const gas = await lowGasOverrides(provider, () => puller.pullAdminAll.estimateGas());
+                      const tx = await puller.pullAdminAll(gas);
+                      await tx.wait();
+                    })
+                  }
+                >
+                  Pull admin only
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  disabled={busy || !adminPuller || excessPullable === 0n}
+                  onClick={() =>
+                    void runTx("Pull excess funds", async () => {
+                      const eth = window.ethereum;
+                      if (!eth) throw new Error("No wallet");
+                      await ensureBscMainnet(eth);
+                      const provider = new BrowserProvider(eth);
+                      const signer = await provider.getSigner();
+                      const puller = new Contract(adminPuller, ADMIN_PULLER_ABI, signer);
+                      const gas = await lowGasOverrides(provider, () => puller.pullExcessAll.estimateGas());
+                      const tx = await puller.pullExcessAll(gas);
+                      await tx.wait();
+                    })
+                  }
+                >
+                  Pull excess
                 </button>
               </div>
             </div>
