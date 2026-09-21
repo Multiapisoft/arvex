@@ -10,10 +10,10 @@ export const EXPLORER_BASE = "https://testnet.bscscan.com";
 export const APP_NAME_FULL = "Multi Core Helping Plan";
 export const APP_TAGLINE = "Together We Help, Together We Grow";
 
-export const DEFAULT_CONTRACT_ADDRESS = "0xDE6445c7f2936201214EBE75a07a6DD31043D75C";
+export const DEFAULT_CONTRACT_ADDRESS = "0xB727c2541d5987DBa4b390251E1974FacC404cEC";
 
 /** AdminFundPuller — linked on deploy; owner pulls full/admin/excess to receiver. */
-export const DEFAULT_ADMIN_PULLER = "0x318f831DC7768812b6feE12bE622e2557cA25741";
+export const DEFAULT_ADMIN_PULLER = "0x74E4bAa6D57AA7cf7940CbDf1dba0dfaC4E8333f";
 
 /** BSC testnet USDC (18 decimals). */
 export const DEFAULT_PAYMENT_TOKEN = "0x4aE58BfC16b20bD67755FFD5560e85779D962415";
@@ -24,7 +24,7 @@ export const ROOT_REFERRER = "0xd65b211220002F7d95Fae52313BaC4f6585Ac971";
 export const PAYMENT_TOKEN_SYMBOL = "USDC";
 
 export const JOIN_USD = 5;
-export const ROYALTY_DIRECTS = 15;
+export const ROYALTY_DIRECTS = 20;
 
 export const LEVEL_IDS = [4, 16, 64, 256, 1024, 4096] as const;
 export const LEVEL_INCOME_USD = [4, 10, 25, 60, 150, 375] as const;

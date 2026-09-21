@@ -1241,7 +1241,7 @@ export default function MultiCoreApp() {
               : tab === "matrix"
                 ? "Global 4×6 tree"
                 : tab === "royalty"
-                  ? "Monthly equal split · 15 directs"
+                  ? "Monthly equal split · 20 directs"
                   : `${APP_NAME_FULL} · ${shortAddr(contractAddr, 6)}`
           }
         />
@@ -1288,7 +1288,7 @@ export default function MultiCoreApp() {
                   ["Matrix income", fmtUsd(earnedMatrixTotal, tokenDecimals)],
                   ["Royalty income", fmtUsd(earnedRoyalty, tokenDecimals)],
                   ["Pending levels", fmtUsd(pendingAmount, tokenDecimals)],
-                  ["Royalty pool", inRoyalty ? "Qualified (15 directs)" : `${directCount}/${ROYALTY_DIRECTS}`],
+                  ["Royalty pool", inRoyalty ? "Qualified (20 directs)" : `${directCount}/${ROYALTY_DIRECTS}`],
                   ["Sponsor", shortAddr(sponsor)],
                   ["Join amount", joinAmount > 0n ? fmtUsd(joinAmount, tokenDecimals) : `$${JOIN_USD}`],
                 ] as const

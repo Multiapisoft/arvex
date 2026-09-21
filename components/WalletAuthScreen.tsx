@@ -54,7 +54,7 @@ const FEATURES = [
   {
     icon: Trophy,
     title: "Royalty pool",
-    text: "15 directs qualify you. Admin splits the pool equally each month.",
+    text: "20 directs qualify you. Admin splits the pool equally each month.",
   },
 ] as const;
 
