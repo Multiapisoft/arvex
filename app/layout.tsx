@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Multi Core Helping Plan — BSC Testnet",
+  title: "ARVEX Helping Plan — BSC Testnet",
   description:
-    "Multi Core Helping Plan — $5 one-time join, global 4×6 matrix, directs, virtual IDs, and monthly royalty.",
+    "ARVEX Helping Plan — $5 one-time join, global 4×6 matrix, directs, virtual IDs, and monthly royalty.",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

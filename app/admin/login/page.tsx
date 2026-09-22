@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
           <span className="logo-ripple">
             <Image
               src="/logo.png"
-              alt="Multi Core"
+              alt="ARVEX"
               width={48}
               height={48}
               className="rounded-full"
@@ -58,7 +58,7 @@ export default function AdminLoginPage() {
             <h1 className="text-xl font-bold">
               <span className="text-gradient-gold">Admin Login</span>
             </h1>
-            <p className="text-2xs tracking-label text-muted">Multi Core · secure panel</p>
+            <p className="text-2xs tracking-label text-muted">ARVEX · secure panel</p>
           </div>
         </div>
 

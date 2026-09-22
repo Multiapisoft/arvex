@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* =============================================================================
-   Multi Core — Design System
+   ARVEX — Design System
    Dark · Solar · Green + Gold · Glassmorphism
    Tailwind CSS v4 (CSS-first). Tokens below generate utilities automatically
    (e.g. --color-solar-400 -> bg-solar-400 / text-solar-400 / border-solar-400).
@@ -1036,7 +1036,7 @@
 }
 
 
-/* Multi Core extras */
+/* ARVEX extras */
 @layer components {
   .matrix-tree {
     padding: 1.1rem 0.75rem 1.25rem;

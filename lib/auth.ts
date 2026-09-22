@@ -47,7 +47,7 @@ function seedUsers(): AdminUser[] {
     {
       id: "admin-1",
       email,
-      name: "Multi Core Admin",
+      name: "ARVEX Admin",
       passwordHash: bcrypt.hashSync(password, 10),
       role: "superadmin",
       createdAt: now,

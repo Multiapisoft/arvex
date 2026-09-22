@@ -414,7 +414,7 @@ export default function MultiCoreApp() {
     }
     const signer = await provider.getSigner();
     if (!isAddress(contractAddr) || contractAddr === ZeroAddress) {
-      throw new Error("Set a valid Multi Core contract address first");
+      throw new Error("Set a valid ARVEX contract address first");
     }
     return {
       provider,

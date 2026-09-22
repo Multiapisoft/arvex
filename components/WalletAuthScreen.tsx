@@ -86,7 +86,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
           </div>
 
           <h1 className="wallet-auth-title">
-            <span className="text-solar-400">MULTI</span> CORE
+            <span className="text-solar-400">AR</span>VEX
           </h1>
           <p className="wallet-auth-sub">{APP_TAGLINE}</p>
           <p className="wallet-auth-desc">

@@ -7,7 +7,7 @@ export const BSC_CHAIN_ID_HEX = "0x61";
 export const BSC_RPC = "https://bsc-testnet-dataseed.bnbchain.org";
 export const EXPLORER_BASE = "https://testnet.bscscan.com";
 
-export const APP_NAME_FULL = "Multi Core Helping Plan";
+export const APP_NAME_FULL = "ARVEX Helping Plan";
 export const APP_TAGLINE = "Together We Help, Together We Grow";
 
 export const DEFAULT_CONTRACT_ADDRESS = "0xB727c2541d5987DBa4b390251E1974FacC404cEC";
