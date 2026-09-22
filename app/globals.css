@@ -52,11 +52,11 @@
   --color-leaf-900: #071f45;
 
   /* ---------- Semantic surfaces (dark solar) ---------- */
-  --color-background: #05070c;
-  --color-surface: #0a0e16;
-  --color-surface-2: #0e131d;
-  --color-elevated: #141a26;
-  --color-overlay: rgba(3, 5, 9, 0.72);
+  --color-background: #061635;
+  --color-surface: #0a2048;
+  --color-surface-2: #0d2856;
+  --color-elevated: #123166;
+  --color-overlay: rgba(4, 12, 32, 0.74);
 
   --color-glass: rgba(255, 255, 255, 0.045);
   --color-glass-strong: rgba(255, 255, 255, 0.08);
@@ -233,9 +233,9 @@
   body {
     color: var(--color-foreground);
     background:
-      radial-gradient(1000px 520px at 78% -12%, rgba(255, 147, 26, 0.16) 0%, transparent 60%),
-      radial-gradient(820px 520px at 4% 108%, rgba(11, 94, 215, 0.18) 0%, transparent 58%),
-      linear-gradient(165deg, var(--color-background) 0%, #060b16 100%);
+      radial-gradient(1100px 560px at 80% -12%, rgba(255, 200, 70, 0.16) 0%, transparent 60%),
+      radial-gradient(950px 620px at 2% 112%, rgba(30, 120, 230, 0.42) 0%, transparent 60%),
+      linear-gradient(165deg, #0a2c6e 0%, #071c47 50%, #050f2e 100%);
     background-attachment: fixed;
     min-height: 100vh;
     font-family: var(--font-sans);
@@ -823,8 +823,8 @@
 
 @utility bg-solar-radial {
   background:
-    radial-gradient(600px 300px at 80% -20%, rgba(255, 147, 26, 0.18), transparent 60%),
-    radial-gradient(600px 300px at 0% 120%, rgba(11, 94, 215, 0.18), transparent 60%);
+    radial-gradient(600px 300px at 80% -20%, rgba(255, 200, 70, 0.18), transparent 60%),
+    radial-gradient(600px 300px at 0% 120%, rgba(30, 120, 230, 0.30), transparent 60%);
 }
 
 @utility glow-gold {
@@ -1629,7 +1629,7 @@
   }
   .mx-node.is-virtual {
     border-color: rgba(43, 140, 255, 0.45);
-    background: linear-gradient(165deg, rgba(43, 140, 255, 0.12), rgba(6, 10, 20, 0.92));
+    background: linear-gradient(165deg, rgba(43, 140, 255, 0.12), rgba(7, 22, 52, 0.92));
   }
   .mx-node.is-virtual .mx-node-avatar {
     color: var(--color-leaf-200);
@@ -1741,7 +1741,7 @@
     min-height: 112px;
     padding: 0.85rem 0.7rem 0.75rem;
     border-radius: 14px;
-    background: rgba(9, 13, 22, 0.88);
+    background: rgba(9, 26, 58, 0.88);
     border: 1px solid var(--color-border);
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s;
   }
@@ -1751,7 +1751,7 @@
     padding: 1rem 0.9rem;
     border-width: 1.5px;
     border-color: var(--color-border-strong);
-    background: linear-gradient(165deg, rgba(255,179,71,0.14), rgba(6,10,20,0.92));
+    background: linear-gradient(165deg, rgba(255,179,71,0.14), rgba(7,22,52,0.92));
     box-shadow: 0 0 0 1px rgba(255,179,71,0.1), 0 12px 28px rgba(0,0,0,0.35);
   }
   .mx-node-sm {
@@ -1832,7 +1832,7 @@
     position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
     z-index: 20; display: flex; align-items: center; gap: 0.35rem;
     padding: 0.4rem 0.5rem; border-radius: var(--radius-sm);
-    background: rgba(6,10,20,0.96); border: 1px solid var(--color-border-strong);
+    background: rgba(7,22,52,0.96); border: 1px solid var(--color-border-strong);
     box-shadow: 0 10px 28px rgba(0,0,0,0.45); white-space: nowrap;
   }
   .mx-node-tip code { font-size: 0.62rem; color: var(--color-solar-200); max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
@@ -1921,7 +1921,7 @@
     display: flex; flex-direction: column;
     border-radius: var(--radius-xl);
     border: 1px solid var(--color-border-strong);
-    background: linear-gradient(180deg, #0e1522 0%, #05070c 100%);
+    background: linear-gradient(180deg, #0d2a5e 0%, #061635 100%);
     box-shadow: 0 24px 60px rgba(0,0,0,0.55), var(--shadow-glow-gold);
     overflow: hidden;
     animation: wallet-auth-in 0.25s ease both;
@@ -2018,7 +2018,7 @@
       border-radius: 1.15rem 1.15rem 0 0;
       border: 1px solid var(--color-border-strong);
       border-bottom: 0;
-      background: linear-gradient(180deg, #101827 0%, #070a11 100%);
+      background: linear-gradient(180deg, #0d2a5e 0%, #071a3f 100%);
       box-shadow: 0 -18px 48px rgba(0,0,0,0.5);
       animation: mx-sheet-up 0.28s ease both;
       overflow: hidden;
@@ -2416,10 +2416,10 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse 70% 55% at 18% 12%, rgba(255, 179, 71, 0.38) 0%, transparent 55%),
-      radial-gradient(ellipse 55% 45% at 88% 78%, rgba(24, 119, 242, 0.22) 0%, transparent 50%),
-      radial-gradient(ellipse 40% 35% at 55% 40%, rgba(255, 215, 106, 0.08) 0%, transparent 60%),
-      linear-gradient(160deg, #08101f 0%, #060a12 45%, #04060b 100%);
+      radial-gradient(ellipse 70% 55% at 18% 12%, rgba(255, 200, 70, 0.32) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 50% at 88% 80%, rgba(30, 120, 230, 0.48) 0%, transparent 55%),
+      radial-gradient(ellipse 45% 38% at 55% 40%, rgba(255, 215, 106, 0.10) 0%, transparent 60%),
+      linear-gradient(160deg, #0a2c6e 0%, #08214f 45%, #050f2e 100%);
     z-index: 0;
   }
   .wallet-auth-bg::after {
@@ -2438,9 +2438,9 @@
     inset: 0;
     background: linear-gradient(
       105deg,
-      rgba(3, 6, 12, 0.55) 0%,
-      rgba(3, 6, 12, 0.35) 45%,
-      rgba(3, 6, 12, 0.65) 100%
+      rgba(6, 22, 52, 0.42) 0%,
+      rgba(6, 22, 52, 0.18) 45%,
+      rgba(6, 22, 52, 0.5) 100%
     );
     z-index: 1;
   }
@@ -2565,7 +2565,7 @@
     text-align: center;
     border-radius: var(--radius-xl);
     border: 1px solid rgba(255, 193, 71, 0.32);
-    background: rgba(9, 13, 22, 0.72);
+    background: rgba(9, 26, 58, 0.72);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow:
