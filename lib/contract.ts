@@ -10,10 +10,10 @@ export const EXPLORER_BASE = "https://testnet.bscscan.com";
 export const APP_NAME_FULL = "ARVEX Helping Plan";
 export const APP_TAGLINE = "Together We Help, Together We Grow";
 
-export const DEFAULT_CONTRACT_ADDRESS = "0xB727c2541d5987DBa4b390251E1974FacC404cEC";
+export const DEFAULT_CONTRACT_ADDRESS = "0xa3A924208517378601fF85d275035C55d77b0E9d";
 
 /** AdminFundPuller — linked on deploy; owner pulls full/admin/excess to receiver. */
-export const DEFAULT_ADMIN_PULLER = "0x74E4bAa6D57AA7cf7940CbDf1dba0dfaC4E8333f";
+export const DEFAULT_ADMIN_PULLER = "0x8326EBDB381EDa0dA2e48336977cEb0c8eab8f7b";
 
 /** BSC testnet USDC (18 decimals). */
 export const DEFAULT_PAYMENT_TOKEN = "0x4aE58BfC16b20bD67755FFD5560e85779D962415";
