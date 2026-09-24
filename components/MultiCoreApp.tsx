@@ -593,10 +593,16 @@ export default function MultiCoreApp() {
     try {
       const c = await getReadContract();
       const totalLen = Number(await c.incomeCount(account).catch(() => 0n));
-      // Pull full ledger for accurate Admin/Spill totals (creator wallet can be large).
-      const fetchLimit = Math.min(256, Math.max(0, totalLen));
-      const raw = fetchLimit > 0 ? await c.incomeOf(account, 0, fetchLimit).catch(() => []) : [];
-      let all: IncomeRow[] = (raw as unknown[]).map((r) => {
+      // Contract MAX_PAGE is 64 — fetch in chunks so large ledgers don't revert InvalidPage.
+      const PAGE = 64;
+      const rawAll: unknown[] = [];
+      for (let offset = 0; offset < totalLen; offset += PAGE) {
+        const limit = Math.min(PAGE, totalLen - offset);
+        const chunk = await c.incomeOf(account, offset, limit).catch(() => []);
+        if (!Array.isArray(chunk) || chunk.length === 0) break;
+        rawAll.push(...chunk);
+      }
+      let all: IncomeRow[] = rawAll.map((r) => {
         const row = r as Record<string, unknown> & { [i: number]: unknown };
         return {
           kind: Number(row.kind ?? row[0] ?? 0),
