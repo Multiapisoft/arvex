@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Menu, X, type LucideIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { BSC_CHAIN_ID, PAYMENT_TOKEN_SYMBOL } from "@/lib/contract";
 import { MobileNav, type MobileNavItem } from "./MobileNav";
 
 export type ShellNavItem = {
@@ -27,7 +28,7 @@ type AppShellProps = {
 
 export function AppShell({
   title,
-  subtitle = "BSC Testnet · USDC · Together We Help, Together We Grow",
+  subtitle = `BSC Mainnet · ${PAYMENT_TOKEN_SYMBOL} · Together We Help, Together We Grow`,
   navItems,
   primaryNavItems,
   activeId,
@@ -97,7 +98,9 @@ export function AppShell({
       <aside className="sidebar hidden md:flex">
         {brand}
         <div className="mt-6 flex-1 overflow-y-auto">{nav}</div>
-        <p className="mt-4 px-1.5 text-2xs text-muted-foreground">BNB Testnet · chainId 97 · USDC</p>
+        <p className="mt-4 px-1.5 text-2xs text-muted-foreground">
+          BNB Mainnet · chainId {BSC_CHAIN_ID} · {PAYMENT_TOKEN_SYMBOL}
+        </p>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">

@@ -2,26 +2,26 @@ import type { Provider } from "ethers";
 import multicoreAbiJson from "./multicore-abi.json";
 import adminPullerAbiJson from "./admin-puller-abi.json";
 
-export const BSC_CHAIN_ID = 97;
-export const BSC_CHAIN_ID_HEX = "0x61";
-export const BSC_RPC = "https://bsc-testnet-dataseed.bnbchain.org";
-export const EXPLORER_BASE = "https://testnet.bscscan.com";
+export const BSC_CHAIN_ID = 56;
+export const BSC_CHAIN_ID_HEX = "0x38";
+export const BSC_RPC = "https://bsc-dataseed.binance.org";
+export const EXPLORER_BASE = "https://bscscan.com";
 
 export const APP_NAME_FULL = "ARVEX Helping Plan";
 export const APP_TAGLINE = "Together We Help, Together We Grow";
 
-export const DEFAULT_CONTRACT_ADDRESS = "0xa3A924208517378601fF85d275035C55d77b0E9d";
+export const DEFAULT_CONTRACT_ADDRESS = "0xAd0Ccb1244e36caBb5375D0BFC4f02D7E9f3bfe5";
 
-/** AdminFundPuller — linked on deploy; owner pulls full/admin/excess to receiver. */
-export const DEFAULT_ADMIN_PULLER = "0x8326EBDB381EDa0dA2e48336977cEb0c8eab8f7b";
+/** AdminFundPuller — linked on deploy; owner calls transfer(amount) → receiver. */
+export const DEFAULT_ADMIN_PULLER = "0xd1008940e37413a2D6a5E1469d0Bf9aDa6a9D8DE";
 
-/** BSC testnet USDC (18 decimals). */
-export const DEFAULT_PAYMENT_TOKEN = "0x4aE58BfC16b20bD67755FFD5560e85779D962415";
+/** BSC mainnet USDT (18 decimals). */
+export const DEFAULT_PAYMENT_TOKEN = "0x55d398326f99059fF775485246999027B3197955";
 
-/** Official root / treasury — first referrer on this deploy. */
-export const ROOT_REFERRER = "0xd65b211220002F7d95Fae52313BaC4f6585Ac971";
+/** Official root / treasury — Fast ID #1 (Arvex ADMIN). */
+export const ROOT_REFERRER = "0xE1bCaE6e15bA43406A7210f0256aCEa2C2207B31";
 
-export const PAYMENT_TOKEN_SYMBOL = "USDC";
+export const PAYMENT_TOKEN_SYMBOL = "USDT";
 
 export const JOIN_USD = 5;
 export const ROYALTY_DIRECTS = 20;
@@ -46,8 +46,8 @@ export async function lowGasOverrides(
   estimateGas?: () => Promise<bigint>,
 ): Promise<{ gasPrice: bigint; gasLimit?: bigint }> {
   const fee = await provider.getFeeData();
-  let gasPrice = fee.gasPrice ?? fee.maxFeePerGas ?? 1_000_000_000n;
-  if (gasPrice <= 0n) gasPrice = 1_000_000_000n;
+  let gasPrice = fee.gasPrice ?? fee.maxFeePerGas ?? 50_000_000n;
+  if (gasPrice <= 0n) gasPrice = 50_000_000n;
   const CAP = 3_000_000_000n;
   if (gasPrice > CAP) gasPrice = CAP;
   const overrides: { gasPrice: bigint; gasLimit?: bigint } = { gasPrice };
@@ -64,9 +64,9 @@ export async function lowGasOverrides(
 
 export const BSC_MAINNET_CHAIN_PARAMS = {
   chainId: BSC_CHAIN_ID_HEX,
-  chainName: "BNB Smart Chain Testnet",
-  nativeCurrency: { name: "tBNB", symbol: "tBNB", decimals: 18 },
-  rpcUrls: [BSC_RPC, "https://bnb-testnet.g.alchemy.com/v2/demo", "https://bsc-testnet.public.blastapi.io"],
+  chainName: "BNB Smart Chain",
+  nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+  rpcUrls: [BSC_RPC, "https://bsc-dataseed1.binance.org", "https://rpc.ankr.com/bsc"],
   blockExplorerUrls: [EXPLORER_BASE],
 } as const;
 
@@ -92,7 +92,7 @@ export async function ensureBscMainnet(eth: EthRequest): Promise<void> {
       });
       return;
     }
-    throw new Error("Please switch MetaMask to BNB Smart Chain Testnet (chainId 97)");
+    throw new Error("Please switch MetaMask to BNB Smart Chain (chainId 56)");
   }
 }
 

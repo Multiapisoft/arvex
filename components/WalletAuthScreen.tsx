@@ -39,12 +39,12 @@ const FEATURES = [
   {
     icon: HeartHandshake,
     title: "One-time $5 help",
-    text: "Join once with USDC. Your small help can change many lives.",
+    text: `Join once with ${PAYMENT_TOKEN_SYMBOL}. Your small help can change many lives.`,
   },
   {
     icon: GitBranch,
     title: "Global 4×6 Matrix",
-    text: "4-ID matrix, 6 levels. L1 complete → $4, L2 → $10, then $25 / $60 / $150 / $375. Not $1 per join.",
+    text: "4-ID matrix, 6 levels. L1 complete → $4, L2 → $10, then $25 / $60 / $150 / $375.",
   },
   {
     icon: Users,
@@ -128,7 +128,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                   Connect Wallet
                 </button>
                 <p className="wallet-auth-network">
-                  Target network: BNB Smart Chain Testnet — chainId 97 · {PAYMENT_TOKEN_SYMBOL}
+                  Target network: BNB Smart Chain — chainId 56 · {PAYMENT_TOKEN_SYMBOL}
                 </p>
               </>
             )}
@@ -198,7 +198,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                 </div>
 
                 <p className="wallet-auth-network">
-                  Target network: BNB Smart Chain Testnet — chainId 97 · {PAYMENT_TOKEN_SYMBOL}
+                  Target network: BNB Smart Chain — chainId 56 · {PAYMENT_TOKEN_SYMBOL}
                 </p>
               </>
             )}

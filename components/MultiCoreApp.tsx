@@ -25,6 +25,7 @@ import {
   APP_NAME_FULL,
   BSC_CHAIN_ID,
   BSC_RPC,
+  DEFAULT_ADMIN_PULLER,
   DEFAULT_CONTRACT_ADDRESS,
   DEFAULT_PAYMENT_TOKEN,
   ERC20_ABI,
@@ -290,10 +291,10 @@ export default function MultiCoreApp() {
   const [blockAddr, setBlockAddr] = useState("");
   const [royaltyBatch, setRoyaltyBatch] = useState("32");
   const [virtualBatch, setVirtualBatch] = useState("8");
-  const [recoverToken, setRecoverToken] = useState("");
+  const [recoverToken, setRecoverToken] = useState(DEFAULT_PAYMENT_TOKEN);
   const [recoverTo, setRecoverTo] = useState("");
   const [recoverAmt, setRecoverAmt] = useState("");
-  const [adminPuller, setAdminPuller] = useState("");
+  const [adminPuller, setAdminPuller] = useState(DEFAULT_ADMIN_PULLER);
   const [pullerReceiver, setPullerReceiver] = useState("");
   const [totalPullable, setTotalPullable] = useState(0n);
   const [pullAmount, setPullAmount] = useState("");
@@ -410,7 +411,7 @@ export default function MultiCoreApp() {
     const provider = new BrowserProvider(eth);
     const network = await provider.getNetwork();
     if (Number(network.chainId) !== BSC_CHAIN_ID) {
-      throw new Error("Please switch to BNB Smart Chain Testnet (chainId 97)");
+      throw new Error("Please switch to BNB Smart Chain (chainId 56)");
     }
     const signer = await provider.getSigner();
     if (!isAddress(contractAddr) || contractAddr === ZeroAddress) {
@@ -438,6 +439,7 @@ export default function MultiCoreApp() {
       const provider = getReadProvider();
       const tokenAddr: string = (await c.paymentToken().catch(() => DEFAULT_PAYMENT_TOKEN)) || DEFAULT_PAYMENT_TOKEN;
       setPaymentToken(tokenAddr);
+      setRecoverToken(tokenAddr);
       const token = new Contract(tokenAddr, ERC20_ABI, provider);
       const [
         sym,
@@ -472,8 +474,8 @@ export default function MultiCoreApp() {
         c.treasury().catch(() => ""),
         c.adminPuller().catch(() => ZeroAddress),
       ]);
-      setTokenSymbol(String(sym));
-      setTokenDecimals(Number(dec));
+      setTokenSymbol(String(sym || PAYMENT_TOKEN_SYMBOL));
+      setTokenDecimals(Number(dec) || 18);
       setJoinAmount(asBig(join));
       setTotalPositions(Number(positionsN));
       setPaidIds(Number(paid));
@@ -485,8 +487,10 @@ export default function MultiCoreApp() {
       setRoyaltyEpoch(asBig(epoch));
       setPaused(Boolean(pausedVal));
       setTreasury(String(treasuryAddr || ""));
-      const puller = String(pullerAddr || "");
-      setAdminPuller(isAddress(puller) && puller !== ZeroAddress ? puller : "");
+      const pullerRaw = String(pullerAddr || "");
+      const puller =
+        isAddress(pullerRaw) && pullerRaw !== ZeroAddress ? pullerRaw : DEFAULT_ADMIN_PULLER;
+      setAdminPuller(puller);
       try {
         const coreBal = await token.balanceOf(contractAddr).catch(() => 0n);
         setTotalPullable(asBig(coreBal));
@@ -966,7 +970,7 @@ export default function MultiCoreApp() {
     );
     if (custom?.[1] && names[custom[1]]) return names[custom[1]];
     if (lower.includes("missing revert data") || lower.includes("unknown custom error")) {
-      return `${label} failed — check BSC Testnet, ${tokenSymbol} balance, approve, and a registered referrer.`;
+      return `${label} failed — check BSC Mainnet, ${tokenSymbol} balance, approve, and a registered referrer.`;
     }
     return String(msg).slice(0, 180);
   }
@@ -1153,7 +1157,9 @@ export default function MultiCoreApp() {
             "—"
           )}
         </span>
-        <span className="badge badge-success">BSC Testnet · ${JOIN_USD} join</span>
+        <span className="badge badge-success">
+          BSC Mainnet · {PAYMENT_TOKEN_SYMBOL} · ${JOIN_USD} join
+        </span>
         <span>
           Root:{" "}
           <a href={explorerAddress(ROOT_REFERRER, EXPLORER_BASE)} target="_blank" rel="noopener noreferrer">
@@ -1348,7 +1354,7 @@ export default function MultiCoreApp() {
             <p className="mb-4 text-sm text-muted">
               {isTreasuryWallet
                 ? "Creator/treasury wallet earns Admin (~$2.26 per join) plus Spill (matrix levels with no upline). Matrix level pay still only clears when a level is full."
-                : "Matrix claimable when a level is full: L1 $4 (4 IDs), L2 $10 (16), L3 $25, L4 $60, L5 $150, L6 $375. Not $1 per join. No platform fee."}
+                : "Matrix claimable when a level is full: L1 $4 (4 IDs), L2 $10 (16), L3 $25, L4 $60, L5 $150, L6 $375. No platform fee."}
             </p>
             <div className="grid-stats mb-4">
               <StatTile label="Claimable" value={fmtUsd(claimable, tokenDecimals)} accent />
@@ -1694,7 +1700,7 @@ export default function MultiCoreApp() {
             <div className="card">
               <h2 className="card-title mb-3">Admin fund puller</h2>
               <p className="mb-2 text-sm text-muted">
-                Same as USDTCoinContract: owner calls sellAdminFunds — all to one receiver (no split).
+                Owner calls transfer — all funds go to one receiver (no split).
               </p>
               <p className="mb-1 text-sm text-muted">
                 Puller:{" "}
@@ -1727,7 +1733,7 @@ export default function MultiCoreApp() {
                   type="button"
                   disabled={busy || !adminPuller || totalPullable === 0n}
                   onClick={() =>
-                    void runTx("sellAdminFunds", async () => {
+                    void runTx("transfer", async () => {
                       const eth = getEthereum();
                       if (!eth) throw new Error("No wallet");
                       await ensureBscMainnet(eth);
@@ -1739,15 +1745,15 @@ export default function MultiCoreApp() {
                           ? parseUnits(pullAmount, tokenDecimals)
                           : totalPullable;
                       const gas = await lowGasOverrides(provider, () =>
-                        puller.sellAdminFunds.estimateGas(amount),
+                        puller.transfer.estimateGas(amount),
                       );
-                      const tx = await puller.sellAdminFunds(amount, gas);
+                      const tx = await puller.transfer(amount, gas);
                       await tx.wait();
                       setPullAmount("");
                     })
                   }
                 >
-                  Pull
+                  Transfer
                 </button>
               </div>
             </div>
