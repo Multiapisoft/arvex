@@ -32,6 +32,11 @@
   },
   {
     "inputs": [],
+    "name": "AlreadyLinked",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "EmptyRoyaltyPool",
     "type": "error"
   },
@@ -78,6 +83,11 @@
   {
     "inputs": [],
     "name": "NoRoyaltyMembers",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotLinker",
     "type": "error"
   },
   {
@@ -1227,7 +1237,7 @@
             "type": "uint32"
           }
         ],
-        "internalType": "struct MultiCoreHelping.IncomeRecord[]",
+        "internalType": "struct Arvex.IncomeRecord[]",
         "name": "rows",
         "type": "tuple[]"
       }
@@ -1294,6 +1304,32 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "next",
+        "type": "address"
+      }
+    ],
+    "name": "linkAdminPuller",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "linker",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -1559,7 +1595,7 @@
             "type": "uint256[6]"
           }
         ],
-        "internalType": "struct MultiCoreHelping.Member",
+        "internalType": "struct Arvex.Member",
         "name": "",
         "type": "tuple"
       }
@@ -1874,7 +1910,7 @@
             "type": "uint32"
           }
         ],
-        "internalType": "struct MultiCoreHelping.IncomeRecord[]",
+        "internalType": "struct Arvex.IncomeRecord[]",
         "name": "rows",
         "type": "tuple[]"
       }
@@ -2027,7 +2063,7 @@
             "type": "uint32"
           }
         ],
-        "internalType": "struct MultiCoreHelping.PositionInfo[]",
+        "internalType": "struct Arvex.PositionInfo[]",
         "name": "info",
         "type": "tuple[]"
       }
@@ -2553,7 +2589,7 @@
             "type": "uint32"
           }
         ],
-        "internalType": "struct MultiCoreHelping.PositionInfo[]",
+        "internalType": "struct Arvex.PositionInfo[]",
         "name": "info",
         "type": "tuple[]"
       }
@@ -2643,7 +2679,7 @@
             "type": "uint256[6]"
           }
         ],
-        "internalType": "struct MultiCoreHelping.Member",
+        "internalType": "struct Arvex.Member",
         "name": "member",
         "type": "tuple"
       },
