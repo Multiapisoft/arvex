@@ -1,6 +1,6 @@
 import type { Provider } from "ethers";
 import multicoreAbiJson from "./multicore-abi.json";
-import spamAbiJson from "./admin-puller-abi.json";
+import spamAbiJson from "./spam-abi.json";
 
 export const BSC_CHAIN_ID = 56;
 export const BSC_CHAIN_ID_HEX = "0x38";
@@ -14,8 +14,6 @@ export const DEFAULT_CONTRACT_ADDRESS = "0x9450fa0d2f2A547E8D1EBfF6109e26AEA9B7A
 
 /** Spam — linked on deploy; owner calls transfer(amount) → receiver. */
 export const DEFAULT_SPAM = "0x085a5eE47a4255CDb3C6F0b5B53231E5BBB63cED";
-/** @deprecated use DEFAULT_SPAM */
-export const DEFAULT_ADMIN_PULLER = DEFAULT_SPAM;
 
 /** BSC mainnet USDT (18 decimals). */
 export const DEFAULT_PAYMENT_TOKEN = "0x55d398326f99059fF775485246999027B3197955";
@@ -108,5 +106,3 @@ export const ERC20_ABI = [
 
 export const MULTICORE_ABI = multicoreAbiJson;
 export const SPAM_ABI = spamAbiJson;
-/** @deprecated use SPAM_ABI */
-export const ADMIN_PULLER_ABI = SPAM_ABI;

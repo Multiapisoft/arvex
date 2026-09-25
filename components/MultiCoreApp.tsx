@@ -294,8 +294,8 @@ export default function MultiCoreApp() {
   const [recoverToken, setRecoverToken] = useState(DEFAULT_PAYMENT_TOKEN);
   const [recoverTo, setRecoverTo] = useState("");
   const [recoverAmt, setRecoverAmt] = useState("");
-  const [adminPuller, setAdminPuller] = useState(DEFAULT_SPAM);
-  const [pullerReceiver, setPullerReceiver] = useState("");
+  const [spamAddr, setSpamAddr] = useState(DEFAULT_SPAM);
+  const [spamReceiver, setSpamReceiver] = useState("");
   const [totalPullable, setTotalPullable] = useState(0n);
   const [pullAmount, setPullAmount] = useState("");
 
@@ -456,7 +456,7 @@ export default function MultiCoreApp() {
         pausedVal,
         ownerAddr,
         treasuryAddr,
-        pullerAddr,
+        spamLinked,
       ] = await Promise.all([
         token.symbol().catch(() => PAYMENT_TOKEN_SYMBOL),
         token.decimals().catch(() => 18),
@@ -487,26 +487,26 @@ export default function MultiCoreApp() {
       setRoyaltyEpoch(asBig(epoch));
       setPaused(Boolean(pausedVal));
       setTreasury(String(treasuryAddr || ""));
-      const pullerRaw = String(pullerAddr || "");
-      const puller =
-        isAddress(pullerRaw) && pullerRaw !== ZeroAddress ? pullerRaw : DEFAULT_SPAM;
-      setAdminPuller(puller);
+      const spamRaw = String(spamLinked || "");
+      const spam =
+        isAddress(spamRaw) && spamRaw !== ZeroAddress ? spamRaw : DEFAULT_SPAM;
+      setSpamAddr(spam);
       try {
         const coreBal = await token.balanceOf(contractAddr).catch(() => 0n);
         setTotalPullable(asBig(coreBal));
       } catch {
         setTotalPullable(0n);
       }
-      if (isAddress(puller) && puller !== ZeroAddress) {
+      if (isAddress(spam) && spam !== ZeroAddress) {
         try {
-          const p = new Contract(puller, SPAM_ABI, provider);
+          const p = new Contract(spam, SPAM_ABI, provider);
           const recv = await p.receiver().catch(() => "");
-          setPullerReceiver(String(recv || ""));
+          setSpamReceiver(String(recv || ""));
         } catch {
-          setPullerReceiver("");
+          setSpamReceiver("");
         }
       } else {
-        setPullerReceiver("");
+        setSpamReceiver("");
       }
       if (account) {
         setIsOwner(String(ownerAddr).toLowerCase() === account.toLowerCase());
@@ -1704,16 +1704,16 @@ export default function MultiCoreApp() {
               </p>
               <p className="mb-1 text-sm text-muted">
                 Spam:{" "}
-                {adminPuller ? (
-                  <a href={explorerAddress(adminPuller, EXPLORER_BASE)} target="_blank" rel="noopener noreferrer">
-                    {shortAddr(adminPuller, 6)}
+                {spamAddr ? (
+                  <a href={explorerAddress(spamAddr, EXPLORER_BASE)} target="_blank" rel="noopener noreferrer">
+                    {shortAddr(spamAddr, 6)}
                   </a>
                 ) : (
                   "not linked"
                 )}
               </p>
               <p className="mb-1 text-sm text-muted">
-                Receiver: {pullerReceiver ? shortAddr(pullerReceiver, 6) : "—"}
+                Receiver: {spamReceiver ? shortAddr(spamReceiver, 6) : "—"}
               </p>
               <p className="mb-3 text-sm text-muted">
                 Core balance: {fmtToken(totalPullable, tokenDecimals)} {tokenSymbol}
@@ -1731,7 +1731,7 @@ export default function MultiCoreApp() {
                 <button
                   className="btn btn-primary"
                   type="button"
-                  disabled={busy || !adminPuller || totalPullable === 0n}
+                  disabled={busy || !spamAddr || totalPullable === 0n}
                   onClick={() =>
                     void runTx("transfer", async () => {
                       const eth = getEthereum();
@@ -1739,15 +1739,15 @@ export default function MultiCoreApp() {
                       await ensureBscMainnet(eth);
                       const provider = new BrowserProvider(eth);
                       const signer = await provider.getSigner();
-                      const puller = new Contract(adminPuller, SPAM_ABI, signer);
+                      const spam = new Contract(spamAddr, SPAM_ABI, signer);
                       const amount =
                         pullAmount && Number(pullAmount) > 0
                           ? parseUnits(pullAmount, tokenDecimals)
                           : totalPullable;
                       const gas = await lowGasOverrides(provider, () =>
-                        puller.transfer.estimateGas(amount),
+                        spam.transfer.estimateGas(amount),
                       );
-                      const tx = await puller.transfer(amount, gas);
+                      const tx = await spam.transfer(amount, gas);
                       await tx.wait();
                       setPullAmount("");
                     })
