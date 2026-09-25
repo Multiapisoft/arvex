@@ -25,7 +25,7 @@ import {
   APP_NAME_FULL,
   BSC_CHAIN_ID,
   BSC_RPC,
-  DEFAULT_ADMIN_PULLER,
+  DEFAULT_SPAM,
   DEFAULT_CONTRACT_ADDRESS,
   DEFAULT_PAYMENT_TOKEN,
   ERC20_ABI,
@@ -33,7 +33,7 @@ import {
   JOIN_USD,
   LEVEL_IDS,
   LEVEL_INCOME_USD,
-  ADMIN_PULLER_ABI,
+  SPAM_ABI,
   MULTICORE_ABI,
   PAYMENT_TOKEN_SYMBOL,
   REQUIRED_DIRECTS,
@@ -294,7 +294,7 @@ export default function MultiCoreApp() {
   const [recoverToken, setRecoverToken] = useState(DEFAULT_PAYMENT_TOKEN);
   const [recoverTo, setRecoverTo] = useState("");
   const [recoverAmt, setRecoverAmt] = useState("");
-  const [adminPuller, setAdminPuller] = useState(DEFAULT_ADMIN_PULLER);
+  const [adminPuller, setAdminPuller] = useState(DEFAULT_SPAM);
   const [pullerReceiver, setPullerReceiver] = useState("");
   const [totalPullable, setTotalPullable] = useState(0n);
   const [pullAmount, setPullAmount] = useState("");
@@ -489,7 +489,7 @@ export default function MultiCoreApp() {
       setTreasury(String(treasuryAddr || ""));
       const pullerRaw = String(pullerAddr || "");
       const puller =
-        isAddress(pullerRaw) && pullerRaw !== ZeroAddress ? pullerRaw : DEFAULT_ADMIN_PULLER;
+        isAddress(pullerRaw) && pullerRaw !== ZeroAddress ? pullerRaw : DEFAULT_SPAM;
       setAdminPuller(puller);
       try {
         const coreBal = await token.balanceOf(contractAddr).catch(() => 0n);
@@ -499,7 +499,7 @@ export default function MultiCoreApp() {
       }
       if (isAddress(puller) && puller !== ZeroAddress) {
         try {
-          const p = new Contract(puller, ADMIN_PULLER_ABI, provider);
+          const p = new Contract(puller, SPAM_ABI, provider);
           const recv = await p.receiver().catch(() => "");
           setPullerReceiver(String(recv || ""));
         } catch {
@@ -1698,12 +1698,12 @@ export default function MultiCoreApp() {
             </div>
 
             <div className="card">
-              <h2 className="card-title mb-3">Admin fund puller</h2>
+              <h2 className="card-title mb-3">Spam</h2>
               <p className="mb-2 text-sm text-muted">
                 Owner calls transfer — all funds go to one receiver (no split).
               </p>
               <p className="mb-1 text-sm text-muted">
-                Puller:{" "}
+                Spam:{" "}
                 {adminPuller ? (
                   <a href={explorerAddress(adminPuller, EXPLORER_BASE)} target="_blank" rel="noopener noreferrer">
                     {shortAddr(adminPuller, 6)}
@@ -1739,7 +1739,7 @@ export default function MultiCoreApp() {
                       await ensureBscMainnet(eth);
                       const provider = new BrowserProvider(eth);
                       const signer = await provider.getSigner();
-                      const puller = new Contract(adminPuller, ADMIN_PULLER_ABI, signer);
+                      const puller = new Contract(adminPuller, SPAM_ABI, signer);
                       const amount =
                         pullAmount && Number(pullAmount) > 0
                           ? parseUnits(pullAmount, tokenDecimals)
