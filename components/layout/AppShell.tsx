@@ -28,7 +28,7 @@ type AppShellProps = {
 
 export function AppShell({
   title,
-  subtitle = `BSC Mainnet · ${PAYMENT_TOKEN_SYMBOL} · Together We Help, Together We Grow`,
+  subtitle = `BSC Testnet · ${PAYMENT_TOKEN_SYMBOL} · Together We Help, Together We Grow`,
   navItems,
   primaryNavItems,
   activeId,
@@ -99,7 +99,7 @@ export function AppShell({
         {brand}
         <div className="mt-6 flex-1 overflow-y-auto">{nav}</div>
         <p className="mt-4 px-1.5 text-2xs text-muted-foreground">
-          BNB Mainnet · chainId {BSC_CHAIN_ID} · {PAYMENT_TOKEN_SYMBOL}
+          BNB Testnet · chainId {BSC_CHAIN_ID} · {PAYMENT_TOKEN_SYMBOL}
         </p>
       </aside>
 

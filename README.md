@@ -1,17 +1,17 @@
-# ARVEX Helping Plan — UI
+# ARVEX Helping Plan — UI (dev / testnet)
 
-Next.js frontend for the live **BSC Mainnet** deploy (USDT).
+Next.js frontend for **BSC Testnet** (USDC).
 
-## Live contracts (chainId 56)
+## Live contracts (chainId 97)
 
 | Role | Address |
 |------|---------|
-| Arvex | `0xDA1b102Bd151f5342a1e56C52B223B6ffeb90726` |
-| Spam | `0xF7D82E1c4097b380FB0c19757c14f198A3e773D6` |
-| USDT | `0x55d398326f99059fF775485246999027B3197955` |
+| Arvex | `0xA726e98bc729FA7997314a6b992782A1B6933D98` |
+| Spam | `0xCDdA9E1f0bfA9ababd08403bad2bD6370bf31029` |
+| USDC | `0x4aE58BfC16b20bD67755FFD5560e85779D962415` |
 | Root / Fast ID #1 | `0xE1bCaE6e15bA43406A7210f0256aCEa2C2207B31` |
 
-Config source of truth: `lib/contract.ts`.
+Config: `lib/contract.ts`. Withdraw fee: 10% to treasury.
 
 ## Dev
 
@@ -20,4 +20,4 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Wallet must be on **BNB Smart Chain (56)** with USDT.
+Wallet must be on **BNB Smart Chain Testnet (97)** with USDC.

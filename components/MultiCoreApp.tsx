@@ -411,7 +411,7 @@ export default function MultiCoreApp() {
     const provider = new BrowserProvider(eth);
     const network = await provider.getNetwork();
     if (Number(network.chainId) !== BSC_CHAIN_ID) {
-      throw new Error("Please switch to BNB Smart Chain (chainId 56)");
+      throw new Error("Please switch to BNB Smart Chain Testnet (chainId 97)");
     }
     const signer = await provider.getSigner();
     if (!isAddress(contractAddr) || contractAddr === ZeroAddress) {
@@ -970,7 +970,7 @@ export default function MultiCoreApp() {
     );
     if (custom?.[1] && names[custom[1]]) return names[custom[1]];
     if (lower.includes("missing revert data") || lower.includes("unknown custom error")) {
-      return `${label} failed — check BSC Mainnet, ${tokenSymbol} balance, approve, and a registered referrer.`;
+      return `${label} failed — check BSC Testnet, ${tokenSymbol} balance, approve, and a registered referrer.`;
     }
     return String(msg).slice(0, 180);
   }
@@ -1158,7 +1158,7 @@ export default function MultiCoreApp() {
           )}
         </span>
         <span className="badge badge-success">
-          BSC Mainnet · {PAYMENT_TOKEN_SYMBOL} · ${JOIN_USD} join
+          BSC Testnet · {PAYMENT_TOKEN_SYMBOL} · ${JOIN_USD} join
         </span>
         <span>
           Root:{" "}

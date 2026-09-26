@@ -128,7 +128,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                   Connect Wallet
                 </button>
                 <p className="wallet-auth-network">
-                  Target network: BNB Smart Chain — chainId 56 · {PAYMENT_TOKEN_SYMBOL}
+                  Target network: BNB Smart Chain Testnet — chainId 97 · {PAYMENT_TOKEN_SYMBOL}
                 </p>
               </>
             )}
@@ -198,7 +198,7 @@ export function WalletAuthScreen(props: WalletAuthScreenProps) {
                 </div>
 
                 <p className="wallet-auth-network">
-                  Target network: BNB Smart Chain — chainId 56 · {PAYMENT_TOKEN_SYMBOL}
+                  Target network: BNB Smart Chain Testnet — chainId 97 · {PAYMENT_TOKEN_SYMBOL}
                 </p>
               </>
             )}

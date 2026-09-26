@@ -17,9 +17,9 @@ const ICON_V = "4"; // bump when logo changes to bust caches
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "ARVEX Helping Plan — BSC Mainnet USDT",
+  title: "ARVEX Helping Plan — BSC Testnet USDC",
   description:
-    "ARVEX Helping Plan on BNB Smart Chain — $5 USDT join, global 4×6 matrix, directs, virtual IDs, and monthly royalty.",
+    "ARVEX Helping Plan on BNB Smart Chain Testnet — $5 USDC join, global 4×6 matrix, directs, virtual IDs, and monthly royalty.",
   applicationName: "ARVEX",
   icons: {
     icon: [
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     siteName: "ARVEX Helping Plan",
     title: "ARVEX Helping Plan",
     description:
-      "Together We Help, Together We Grow — $5 USDT join on BNB Smart Chain.",
+      "Together We Help, Together We Grow — $5 USDC join on BNB Smart Chain Testnet.",
     images: [
       {
         url: `/logo.png?v=${ICON_V}`,
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "ARVEX Helping Plan",
     description:
-      "Together We Help, Together We Grow — $5 USDT join on BNB Smart Chain.",
+      "Together We Help, Together We Grow — $5 USDC join on BNB Smart Chain Testnet.",
     images: [`/logo.png?v=${ICON_V}`],
   },
 };
