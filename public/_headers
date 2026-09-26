@@ -1,3 +1,6 @@
+/logo.png
+  Cache-Control: public, max-age=3600, must-revalidate
+
 /favicon.ico
   Cache-Control: public, max-age=3600, must-revalidate
 
@@ -12,12 +15,6 @@
 
 /icon-192.png
   Cache-Control: public, max-age=3600, must-revalidate
-
-/og-image.png
-  Cache-Control: public, max-age=3600, must-revalidate
-
-/logo.png
-  Cache-Control: public, max-age=86400
 
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
