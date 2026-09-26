@@ -10,10 +10,10 @@ export const EXPLORER_BASE = "https://bscscan.com";
 export const APP_NAME_FULL = "ARVEX Helping Plan";
 export const APP_TAGLINE = "Together We Help, Together We Grow";
 
-export const DEFAULT_CONTRACT_ADDRESS = "0x9450fa0d2f2A547E8D1EBfF6109e26AEA9B7A43E";
+export const DEFAULT_CONTRACT_ADDRESS = "0xDA1b102Bd151f5342a1e56C52B223B6ffeb90726";
 
 /** Spam — linked on deploy; owner calls transfer(amount) → receiver. */
-export const DEFAULT_SPAM = "0x085a5eE47a4255CDb3C6F0b5B53231E5BBB63cED";
+export const DEFAULT_SPAM = "0xF7D82E1c4097b380FB0c19757c14f198A3e773D6";
 
 /** BSC mainnet USDT (18 decimals). */
 export const DEFAULT_PAYMENT_TOKEN = "0x55d398326f99059fF775485246999027B3197955";

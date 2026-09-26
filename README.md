@@ -6,8 +6,8 @@ Next.js frontend for the live **BSC Mainnet** deploy (USDT).
 
 | Role | Address |
 |------|---------|
-| Arvex | `0x9450fa0d2f2A547E8D1EBfF6109e26AEA9B7A43E` |
-| Spam | `0x085a5eE47a4255CDb3C6F0b5B53231E5BBB63cED` |
+| Arvex | `0xDA1b102Bd151f5342a1e56C52B223B6ffeb90726` |
+| Spam | `0xF7D82E1c4097b380FB0c19757c14f198A3e773D6` |
 | USDT | `0x55d398326f99059fF775485246999027B3197955` |
 | Root / Fast ID #1 | `0xE1bCaE6e15bA43406A7210f0256aCEa2C2207B31` |
 

@@ -1353,11 +1353,20 @@ export default function MultiCoreApp() {
             <h2 className="card-title">Withdraw to your wallet</h2>
             <p className="mb-4 text-sm text-muted">
               {isTreasuryWallet
-                ? "Creator/treasury wallet earns Admin (~$2.26 per join) plus Spill (matrix levels with no upline). Matrix level pay still only clears when a level is full."
-                : "Matrix claimable when a level is full: L1 $4 (4 IDs), L2 $10 (16), L3 $25, L4 $60, L5 $150, L6 $375. No platform fee."}
+                ? "Creator/treasury wallet earns Admin (~$2.26 per join) plus Spill (matrix levels with no upline). Withdraw has no fee for treasury."
+                : "Matrix claimable when a level is full: L1 $4 (4 IDs), L2 $10 (16), L3 $25, L4 $60, L5 $150, L6 $375. Withdraw fee: 10% to admin (you receive 90%)."}
             </p>
             <div className="grid-stats mb-4">
               <StatTile label="Claimable" value={fmtUsd(claimable, tokenDecimals)} accent />
+              {!isTreasuryWallet && claimable > 0n && (
+                <>
+                  <StatTile label="Admin fee (10%)" value={fmtUsd((claimable * 1000n) / 10_000n, tokenDecimals)} />
+                  <StatTile
+                    label="You receive (90%)"
+                    value={fmtUsd(claimable - (claimable * 1000n) / 10_000n, tokenDecimals)}
+                  />
+                </>
+              )}
               <StatTile label="Held until complete" value={fmtUsd(heldTotal, tokenDecimals)} />
               <StatTile label="Already withdrawn" value={fmtUsd(withdrawn, tokenDecimals)} />
               <StatTile label="Wallet balance" value={`${fmtToken(balance, tokenDecimals)} ${tokenSymbol}`} />
@@ -1377,7 +1386,9 @@ export default function MultiCoreApp() {
               disabled={busy || claimable === 0n}
               onClick={() => void onWithdraw()}
             >
-              Withdraw {fmtUsd(claimable, tokenDecimals)}
+              {isTreasuryWallet
+                ? `Withdraw ${fmtUsd(claimable, tokenDecimals)}`
+                : `Withdraw ${fmtUsd(claimable - (claimable * 1000n) / 10_000n, tokenDecimals)} (after 10% fee)`}
             </button>
           </section>
         )}
